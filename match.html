@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#080808">
+<title>FITORA – Match</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cyan:#00d4d4;--green:#7fff00;--yellow:#d4ff00;
+  --red:#ff4545;--orange:#ff8c00;
+  --grad:linear-gradient(90deg,#00d4d4,#7fff00,#d4ff00);
+  --grad-t:linear-gradient(100deg,#00d4d4 0%,#7fff00 50%,#d4ff00 100%);
+  --dark:#080808;--dark2:#101010;--dark3:#181818;
+  --border:rgba(255,255,255,.07);--bc:rgba(0,212,212,.2);
+  --white:#fff;--muted:rgba(255,255,255,.32);--dim:rgba(255,255,255,.6);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-size:16px;overflow:hidden;}
+body{background:var(--dark);color:var(--white);font-family:'Barlow',sans-serif;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;user-select:none;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:.5;}
+.gt{background:var(--grad-t);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+a{text-decoration:none;color:inherit;}
+
+/* ── NAV ── */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:60px;flex-shrink:0;
+  background:rgba(8,8,8,.92);backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(0,212,212,.12);z-index:100;
+}
+.nav-logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.4rem;letter-spacing:6px;text-transform:uppercase;}
+.btn-back{font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);padding:5px 10px;}
+
+/* ── LAYOUT ── */
+.app{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:16px 16px 12px;}
+
+/* filter bar */
+.filter-bar{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-shrink:0;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.filter-bar::-webkit-scrollbar{display:none;}
+.f-pill{
+  white-space:nowrap;font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  padding:6px 12px;border:1px solid var(--border);background:var(--dark3);cursor:pointer;transition:all .18s;
+  clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);flex-shrink:0;
+}
+.f-pill:hover{border-color:var(--bc);}
+.f-pill.active{background:rgba(0,212,212,.1);border-color:var(--cyan);color:var(--cyan);}
+
+/* ── CARD STACK ── */
+.stack-wrap{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.card-stack{position:relative;width:100%;max-width:360px;height:100%;}
+
+.profile-card{
+  position:absolute;inset:0;
+  border-radius:2px;overflow:hidden;
+  cursor:grab;
+  transform-origin:50% 110%;
+  transition:transform .12s ease, box-shadow .12s;
+  will-change:transform;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+.profile-card:active{cursor:grabbing;}
+.profile-card.behind-1{transform:scale(.95) translateY(10px);z-index:1;}
+.profile-card.behind-2{transform:scale(.90) translateY(20px);z-index:0;}
+.profile-card.top{z-index:3;}
+.profile-card.animating{transition:transform .35s cubic-bezier(.22,1,.36,1),opacity .35s;}
+
+.card-photo{
+  width:100%;height:100%;object-fit:cover;display:block;
+  pointer-events:none;
+}
+.card-photo-bg{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:5rem;
+}
+.card-overlay{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(to top,rgba(6,6,6,.98) 0%,rgba(6,6,6,.7) 50%,transparent 100%);
+  padding:20px 20px 16px;
+}
+.card-name-row{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+.card-name{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.7rem;line-height:1;letter-spacing:-1px;}
+.card-age{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.2rem;color:var(--dim);}
+.card-sport-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.card-sport-badge{
+  font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  padding:3px 10px;border:1px solid rgba(0,212,212,.4);
+  background:rgba(0,212,212,.1);color:var(--cyan);
+}
+.card-dist{font-size:.62rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.card-bio{font-size:.78rem;color:var(--dim);line-height:1.5;margin-top:4px;}
+
+/* Stamp labels */
+.stamp{
+  position:absolute;top:28px;
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:2.2rem;letter-spacing:4px;text-transform:uppercase;
+  padding:6px 16px;border:4px solid;
+  transform:rotate(-15deg);opacity:0;
+  pointer-events:none;transition:opacity .1s;
+}
+.stamp-like{left:20px;color:var(--green);border-color:var(--green);transform:rotate(-15deg);}
+.stamp-nope{right:20px;color:var(--red);border-color:var(--red);transform:rotate(15deg);}
+
+/* ── ACTIONS ── */
+.actions{
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  padding:14px 0 4px;flex-shrink:0;
+}
+.act-btn{
+  display:flex;align-items:center;justify-content:center;
+  border:none;cursor:pointer;transition:transform .15s, filter .15s;
+  border-radius:50%;
+}
+.act-btn:hover{transform:scale(1.08);}
+.act-btn:active{transform:scale(.95);}
+.btn-nope{
+  width:58px;height:58px;
+  background:rgba(255,69,69,.12);border:2px solid rgba(255,69,69,.35);
+  font-size:1.5rem;
+}
+.btn-super{
+  width:46px;height:46px;
+  background:rgba(0,212,212,.1);border:2px solid rgba(0,212,212,.3);
+  font-size:1.1rem;
+}
+.btn-like{
+  width:58px;height:58px;
+  background:rgba(127,255,0,.1);border:2px solid rgba(127,255,0,.35);
+  font-size:1.5rem;
+}
+
+/* counter */
+.match-counter{
+  text-align:center;margin-top:8px;flex-shrink:0;
+  font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);
+}
+.match-counter span{color:var(--cyan);font-weight:700;}
+
+/* ── EMPTY STATE ── */
+.empty-state{
+  position:absolute;inset:0;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  text-align:center;padding:32px;
+}
+.empty-state.show{display:flex;}
+.empty-icon{font-size:3.5rem;opacity:.25;}
+.empty-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.6rem;text-transform:uppercase;letter-spacing:1px;}
+.empty-sub{font-size:.78rem;color:var(--muted);line-height:1.7;}
+.btn-reset{
+  background:var(--grad);color:#000;
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:.85rem;letter-spacing:3px;text-transform:uppercase;
+  border:none;cursor:pointer;padding:14px 28px;margin-top:6px;
+  clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);
+  transition:filter .2s;
+}
+.btn-reset:hover{filter:brightness(1.1);}
+
+/* ── MATCH MODAL ── */
+.match-modal{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.88);backdrop-filter:blur(12px);
+  align-items:center;justify-content:center;flex-direction:column;
+  text-align:center;padding:24px;
+}
+.match-modal.show{display:flex;animation:popIn .4s cubic-bezier(.22,1,.36,1) both;}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
+
+.match-avatars{display:flex;align-items:center;justify-content:center;gap:-16px;margin-bottom:24px;position:relative;}
+.ma-wrap{width:90px;height:90px;border-radius:50%;overflow:hidden;border:3px solid;flex-shrink:0;}
+.ma-wrap:first-child{border-color:var(--cyan);transform:translateX(12px);}
+.ma-wrap:last-child{border-color:var(--green);transform:translateX(-12px);}
+.ma-wrap img,.ma-wrap .ma-bg{width:100%;height:100%;object-fit:cover;display:block;font-size:2.5rem;display:flex;align-items:center;justify-content:center;}
+.match-heart{position:absolute;font-size:1.8rem;z-index:1;animation:heartBeat .6s ease .2s both;}
+@keyframes heartBeat{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+
+.match-label{font-size:.62rem;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--cyan);margin-bottom:6px;}
+.match-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:2.4rem;text-transform:uppercase;letter-spacing:-1px;margin-bottom:8px;}
+.match-sub{font-size:.82rem;color:var(--dim);line-height:1.6;margin-bottom:24px;}
+.match-actions{display:flex;gap:10px;width:100%;max-width:320px;}
+.btn-msg{
+  flex:1;background:var(--grad);color:#000;
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:.9rem;letter-spacing:3px;text-transform:uppercase;
+  border:none;cursor:pointer;padding:15px;
+  clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);
+}
+.btn-later{
+  padding:15px 20px;background:transparent;color:var(--muted);
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:.82rem;letter-spacing:2px;text-transform:uppercase;
+  border:1px solid var(--border);cursor:pointer;
+  clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%);
+  transition:all .2s;
+}
+.btn-later:hover{color:var(--white);border-color:rgba(255,255,255,.2);}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="dashboard.html" class="btn-back">← Dashboard</a>
+  <div class="nav-logo gt">FITORA</div>
+  <div style="font-size:.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase" id="navInfo">0 km · Roma</div>
+</nav>
+
+<div class="app">
+
+  <!-- Filter -->
+  <div class="filter-bar">
+    <div class="f-pill active" onclick="filterSport('all',this)">Tutti</div>
+    <div class="f-pill" onclick="filterSport('run',this)">🏃 Corsa</div>
+    <div class="f-pill" onclick="filterSport('gym',this)">🏋️ Palestra</div>
+    <div class="f-pill" onclick="filterSport('cycling',this)">🚴 Ciclismo</div>
+    <div class="f-pill" onclick="filterSport('swim',this)">🏊 Nuoto</div>
+    <div class="f-pill" onclick="filterSport('football',this)">⚽ Calcio</div>
+    <div class="f-pill" onclick="filterSport('tennis',this)">🎾 Tennis</div>
+    <div class="f-pill" onclick="filterSport('yoga',this)">🧘 Yoga</div>
+  </div>
+
+  <!-- Card Stack -->
+  <div class="stack-wrap">
+    <div class="card-stack" id="cardStack">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🏃</div>
+        <div class="empty-title">Hai visto tutti!</div>
+        <div class="empty-sub">Non ci sono altri profili in zona.<br>Ricarica per vedere di nuovo.</div>
+        <button class="btn-reset" onclick="resetDeck()">↺ Ricarica profili</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions">
+    <button class="act-btn btn-nope" onclick="swipeCard('left')" title="Salta">✕</button>
+    <button class="act-btn btn-super" onclick="swipeCard('super')" title="Super like">⭐</button>
+    <button class="act-btn btn-like" onclick="swipeCard('right')" title="Match">♥</button>
+  </div>
+
+  <div class="match-counter">
+    Rimasti: <span id="remaining">0</span> · Match: <span id="matchCount">0</span>
+  </div>
+
+</div>
+
+<!-- Match Modal -->
+<div class="match-modal" id="matchModal">
+  <div class="match-avatars">
+    <div class="ma-wrap" id="myAvatar">
+      <div class="ma-bg" style="background:linear-gradient(135deg,#00d4d4,#7fff00);">🏃</div>
+    </div>
+    <div class="match-heart">💚</div>
+    <div class="ma-wrap" id="theirAvatar"></div>
+  </div>
+  <div class="match-label">// È un match!</div>
+  <div class="match-title gt">Connessi!</div>
+  <div class="match-sub" id="matchSub">Hai qualcosa in comune.</div>
+  <div class="match-actions">
+    <button class="btn-msg" onclick="closeMatch()">💬 Invia Messaggio</button>
+    <button class="btn-later" onclick="closeMatch()">Dopo</button>
+  </div>
+</div>
+
+<script>
+/* ══ PROFILES ══ */
+const ALL_PROFILES = [
+  { id:1,  name:'Luca',     age:26, sport:'run',      sportLabel:'Corsa',    dist:'0.8',  bio:'Corro 5 mattine a settimana. Cerco qualcuno per le uscite lunghe del weekend.',        photo:'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:2,  name:'Sofia',    age:24, sport:'yoga',     sportLabel:'Yoga',     dist:'1.2',  bio:'Insegnante di yoga. Amo le sessioni all\'alba. Cerco compagnia per la meditazione.',   photo:'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:3,  name:'Marco',    age:30, sport:'gym',      sportLabel:'Palestra', dist:'0.5',  bio:'Powerlifting da 4 anni. Split PPL. Cerco sparring partner serio per la mattina.',      photo:'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:4,  name:'Giulia',   age:27, sport:'cycling',  sportLabel:'Ciclismo', dist:'2.1',  bio:'Ciclista endurance. Giro del Lazio ogni domenica. +80km benvenuti.',                   photo:'https://images.unsplash.com/photo-1502904010046-a38a49a3e9be?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:5,  name:'Davide',   age:29, sport:'football', sportLabel:'Calcio',   dist:'1.5',  bio:'Calcetto ogni giovedì sera. Cerco centrocampisti per completare la squadra.',           photo:'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:6,  name:'Alessia',  age:25, sport:'run',      sportLabel:'Corsa',    dist:'0.3',  bio:'Maratoneta amatoriale. PR 4:12/km. Weekend: uscite da 15–20km. Always smiling 🏃‍♀️',    photo:'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:7,  name:'Riccardo', age:33, sport:'swim',     sportLabel:'Nuoto',    dist:'3.0',  bio:'Nuoto 4x/settimana. Vasca da 25m vicino Prati. Cerco lane buddy per le 7am.',           photo:'https://images.unsplash.com/photo-1530549387789-4c1017266635?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:8,  name:'Elena',    age:28, sport:'tennis',   sportLabel:'Tennis',   dist:'1.8',  bio:'Livello 3.5. Cerco partner per doppio misto. Campi a Villa Borghese.',                  photo:'https://images.unsplash.com/photo-1554244933-d876deb6b2ff?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:9,  name:'Filippo',  age:31, sport:'gym',      sportLabel:'Palestra', dist:'0.7',  bio:'Calisthenics + pesi. Pull-up PR: 22. Cerco partner per sessioni mattutine.',            photo:'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:10, name:'Martina',  age:23, sport:'cycling',  sportLabel:'Ciclismo', dist:'2.5',  bio:'Cicloturismo e gravel. Esploro nuovi percorsi ogni weekend. Porte aperte! 🚴‍♀️',         photo:'https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:11, name:'Andrea',   age:35, sport:'run',      sportLabel:'Corsa',    dist:'1.1',  bio:'Triatleta. Nuoto + bici + corsa ogni settimana. Cerco gruppo per allenamenti misti.',   photo:'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:12, name:'Chiara',   age:26, sport:'yoga',     sportLabel:'Yoga',     dist:'0.9',  bio:'Yoga Ashtanga da 3 anni. Pratica quotidiana alle 6. Cerco shala partner.',              photo:'https://images.unsplash.com/photo-1588286840104-8957b019727f?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:13, name:'Matteo',   age:28, sport:'football', sportLabel:'Calcio',   dist:'0.6',  bio:'Ex Serie D. Torneo amatoriale sabato mattina — cercasi ala sinistra tecnica.',          photo:'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:14, name:'Federica', age:30, sport:'gym',      sportLabel:'Palestra', dist:'1.4',  bio:'CrossFit & weightlifting. Open 2024. Cerca WOD partner ogni mattina alle 7.',           photo:'https://images.unsplash.com/photo-1550345332-09e3ac987658?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:15, name:'Lorenzo',  age:27, sport:'swim',     sportLabel:'Nuoto',    dist:'2.2',  bio:'Stile libero e farfalla. 3.2km/h. Alleno 6:30. Cerca compagno di vasca costante.',      photo:'https://images.unsplash.com/photo-1560090995-01632a28895b?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:16, name:'Beatrice', age:25, sport:'run',      sportLabel:'Corsa',    dist:'0.4',  bio:'Half marathon in 1:52. Mattiniera. Parco della Caffarella ogni alba. Vieni! 🌅',        photo:'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:17, name:'Simone',   age:32, sport:'gym',      sportLabel:'Palestra', dist:'1.0',  bio:'Bodybuilding natural. 10 anni di ferro. Cerca partner serio per allenamenti Push.',     photo:'https://images.unsplash.com/photo-1581009137042-c552e485697a?w=500&h=700&fit=crop&crop=top&q=85' },
+  { id:18, name:'Valeria',  age:27, sport:'tennis',   sportLabel:'Tennis',   dist:'2.3',  bio:'Tennis da sempre. Cerca sparring partner per migliorare il rovescio. Livello 4.0.',     photo:'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&h=700&fit=crop&crop=top&q=85' },
+];
+
+let deck = [];
+let matchCount = 0;
+let currentFilter = 'all';
+
+/* ══ INIT ══ */
+function buildDeck(filter) {
+  deck = (filter === 'all' ? [...ALL_PROFILES] : ALL_PROFILES.filter(p => p.sport === filter))
+    .sort(() => Math.random() - .5);
+  renderCards();
+}
+
+function renderCards() {
+  const stack = document.getElementById('cardStack');
+  // Remove old cards
+  stack.querySelectorAll('.profile-card').forEach(c => c.remove());
+
+  if (!deck.length) {
+    document.getElementById('emptyState').classList.add('show');
+    document.getElementById('remaining').textContent = 0;
+    return;
+  }
+  document.getElementById('emptyState').classList.remove('show');
+  document.getElementById('remaining').textContent = deck.length;
+
+  // Render top 3
+  const visible = deck.slice(0, 3);
+  visible.reverse().forEach((p, i) => {
+    const idx = visible.length - 1 - i; // 0=top
+    const card = createCard(p, idx);
+    stack.appendChild(card);
+  });
+
+  // Attach swipe to top card
+  attachSwipe(stack.querySelector('.profile-card.top'));
+}
+
+function createCard(p, stackPos) {
+  const card = document.createElement('div');
+  card.className = 'profile-card ' + (stackPos === 0 ? 'top' : stackPos === 1 ? 'behind-1' : 'behind-2');
+  card.dataset.id = p.id;
+
+  card.innerHTML = `
+    <img class="card-photo" src="${p.photo}" alt="${p.name}"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="card-photo-bg" style="background:linear-gradient(160deg,#0c2020,#080808);display:none">
+      ${sportEmoji(p.sport)}
+    </div>
+    <div class="card-overlay">
+      <div class="card-name-row">
+        <span class="card-name">${p.name}</span>
+        <span class="card-age">${p.age}</span>
+      </div>
+      <div class="card-sport-row">
+        <span class="card-sport-badge">${sportEmoji(p.sport)} ${p.sportLabel}</span>
+        <span class="card-dist">📍 ${p.dist} km</span>
+      </div>
+      <div class="card-bio">${p.bio}</div>
+    </div>
+    <div class="stamp stamp-like">MATCH</div>
+    <div class="stamp stamp-nope">SKIP</div>
+  `;
+  return card;
+}
+
+function sportEmoji(s) {
+  const m={run:'🏃',gym:'🏋️',cycling:'🚴',swim:'🏊',football:'⚽',tennis:'🎾',yoga:'🧘',boxing:'🥊',hiking:'🥾'};
+  return m[s]||'🏃';
+}
+
+/* ══ SWIPE ══ */
+let startX, startY, isDragging = false, activeCard = null;
+const THRESHOLD = 90;
+
+function attachSwipe(card) {
+  if (!card) return;
+  activeCard = card;
+  card.addEventListener('mousedown', dragStart);
+  card.addEventListener('touchstart', dragStart, {passive:true});
+}
+
+function dragStart(e) {
+  if (e.target.tagName === 'BUTTON') return;
+  isDragging = true;
+  const pt = e.touches ? e.touches[0] : e;
+  startX = pt.clientX; startY = pt.clientY;
+  activeCard.style.transition = 'none';
+  document.addEventListener('mousemove', dragMove);
+  document.addEventListener('mouseup',   dragEnd);
+  document.addEventListener('touchmove', dragMove, {passive:true});
+  document.addEventListener('touchend',  dragEnd);
+}
+
+function dragMove(e) {
+  if (!isDragging || !activeCard) return;
+  const pt = e.touches ? e.touches[0] : e;
+  const dx = pt.clientX - startX;
+  const dy = pt.clientY - startY;
+  const rot = dx * 0.08;
+  activeCard.style.transform = `translateX(${dx}px) translateY(${dy*.3}px) rotate(${rot}deg)`;
+
+  // Stamps
+  const likeStamp = activeCard.querySelector('.stamp-like');
+  const nopeStamp = activeCard.querySelector('.stamp-nope');
+  const progress = Math.min(Math.abs(dx) / THRESHOLD, 1);
+  if (dx > 20)  { likeStamp.style.opacity = progress; nopeStamp.style.opacity = 0; }
+  else if (dx < -20) { nopeStamp.style.opacity = progress; likeStamp.style.opacity = 0; }
+  else          { likeStamp.style.opacity = 0; nopeStamp.style.opacity = 0; }
+}
+
+function dragEnd(e) {
+  if (!isDragging || !activeCard) return;
+  isDragging = false;
+  document.removeEventListener('mousemove', dragMove);
+  document.removeEventListener('mouseup',   dragEnd);
+  document.removeEventListener('touchmove', dragMove);
+  document.removeEventListener('touchend',  dragEnd);
+
+  const pt = e.changedTouches ? e.changedTouches[0] : e;
+  const dx = pt.clientX - startX;
+
+  if (dx > THRESHOLD)       resolveSwipe('right');
+  else if (dx < -THRESHOLD) resolveSwipe('left');
+  else snapBack();
+}
+
+function snapBack() {
+  activeCard.style.transition = 'transform .4s cubic-bezier(.22,1,.36,1)';
+  activeCard.style.transform  = '';
+  activeCard.querySelector('.stamp-like').style.opacity = 0;
+  activeCard.querySelector('.stamp-nope').style.opacity = 0;
+}
+
+function resolveSwipe(dir) {
+  if (!activeCard) return;
+  const card = activeCard;
+  const profile = deck[0];
+  activeCard = null;
+
+  card.classList.add('animating');
+  const flyX = dir === 'right' ? window.innerWidth + 200 : -(window.innerWidth + 200);
+  card.style.transform = `translateX(${flyX}px) rotate(${dir==='right'?30:-30}deg)`;
+  card.style.opacity = '0';
+
+  // Pop cards behind up
+  const behind1 = document.querySelector('.profile-card.behind-1');
+  const behind2 = document.querySelector('.profile-card.behind-2');
+  if (behind1) { behind1.style.transition = 'transform .35s cubic-bezier(.22,1,.36,1)'; behind1.className = 'profile-card animating top'; }
+  if (behind2) { behind2.style.transition = 'transform .35s cubic-bezier(.22,1,.36,1)'; behind2.className = 'profile-card animating behind-1'; }
+
+  setTimeout(() => {
+    deck.shift();
+    renderCards();
+
+    if (dir === 'right') {
+      // 40% chance of mutual match
+      if (Math.random() < 0.4) {
+        matchCount++;
+        document.getElementById('matchCount').textContent = matchCount;
+        setTimeout(() => showMatch(profile), 300);
+      }
+    }
+  }, 350);
+}
+
+function swipeCard(dir) {
+  if (!deck.length) return;
+  const top = document.querySelector('.profile-card.top');
+  if (!top) return;
+  activeCard = top;
+
+  top.style.transition = 'none';
+  // Trigger stamp briefly
+  if (dir === 'right') top.querySelector('.stamp-like').style.opacity = 1;
+  else if (dir === 'left') top.querySelector('.stamp-nope').style.opacity = 1;
+
+  setTimeout(() => resolveSwipe(dir === 'super' ? 'right' : dir), 80);
+}
+
+/* ══ MATCH MODAL ══ */
+function showMatch(profile) {
+  const their = document.getElementById('theirAvatar');
+  their.innerHTML = `<img src="${profile.photo}" alt="${profile.name}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none'">`;
+  document.getElementById('matchSub').textContent =
+    `Tu e ${profile.name} praticate entrambi ${profile.sportLabel}. Siete a ${profile.dist} km di distanza.`;
+  document.getElementById('matchModal').classList.add('show');
+}
+
+function closeMatch() {
+  document.getElementById('matchModal').classList.remove('show');
+}
+
+/* ══ FILTER ══ */
+function filterSport(sport, el) {
+  currentFilter = sport;
+  document.querySelectorAll('.f-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  buildDeck(sport);
+}
+
+function resetDeck() {
+  buildDeck(currentFilter);
+}
+
+/* ══ INIT ══ */
+document.getElementById('navDate') && (document.getElementById('navDate').textContent = '');
+
+// Try get user sport from quiz result
+(function() {
+  try {
+    const sp = JSON.parse(localStorage.getItem('fitora_sport'));
+    if (sp && sp.id) {
+      // Pre-filter to their sport
+      // (don't auto-filter, let user choose)
+    }
+  } catch(e) {}
+  buildDeck('all');
+})();
+</script>
+</body>
+</html>

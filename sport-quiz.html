@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#080808">
+<title>FITORA – Il Tuo Sport Ideale</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cyan:#00d4d4; --green:#7fff00; --yellow:#d4ff00;
+  --red:#ff4545; --orange:#ff8c00;
+  --grad:linear-gradient(90deg,#00d4d4,#7fff00,#d4ff00);
+  --grad-t:linear-gradient(100deg,#00d4d4 0%,#7fff00 50%,#d4ff00 100%);
+  --dark:#080808; --dark2:#101010; --dark3:#181818; --dark4:#1e1e1e;
+  --border:rgba(255,255,255,.07); --bc:rgba(0,212,212,.2);
+  --white:#fff; --muted:rgba(255,255,255,.32); --dim:rgba(255,255,255,.55);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{font-size:16px;scroll-behavior:smooth;}
+body{
+  background:var(--dark);color:var(--white);
+  font-family:'Barlow',sans-serif;min-height:100vh;
+  overflow-x:hidden;-webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;opacity:.5;
+}
+.gt{background:var(--grad-t);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+/* ── NAV ── */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 clamp(16px,5vw,40px);height:64px;
+  background:rgba(8,8,8,.88);backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(0,212,212,.12);
+  position:sticky;top:0;z-index:100;
+}
+.nav-logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.45rem;letter-spacing:6px;text-transform:uppercase;}
+.btn-back{
+  font-size:.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);border:1px solid var(--border);padding:5px 12px;
+  text-decoration:none;transition:color .2s,border-color .2s;
+}
+.btn-back:hover{color:var(--cyan);border-color:var(--bc);}
+
+/* ── WRAPPER ── */
+.wrapper{max-width:720px;margin:0 auto;padding:clamp(28px,5vw,52px) clamp(16px,5vw,36px) 64px;}
+
+/* ── PAGE HEADER ── */
+.page-head{text-align:center;margin-bottom:40px;}
+.page-tag{
+  display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:5px;text-transform:uppercase;
+  color:var(--cyan);border:1px solid rgba(0,212,212,.3);padding:5px 14px;margin-bottom:16px;
+}
+.page-title{
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:clamp(2.6rem,9vw,5rem);line-height:.9;
+  text-transform:uppercase;letter-spacing:-2px;margin-bottom:12px;
+}
+.page-sub{font-size:clamp(.82rem,2vw,.92rem);color:var(--dim);line-height:1.7;max-width:480px;margin:0 auto;}
+
+/* ── PROGRESS ── */
+.prog-wrap{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.prog-bar{flex:1;height:3px;background:rgba(255,255,255,.06);overflow:hidden;}
+.prog-fill{height:100%;background:var(--grad);transition:width .5s cubic-bezier(.22,1,.36,1);}
+.prog-lbl{font-size:.62rem;font-weight:700;letter-spacing:3px;color:var(--muted);text-transform:uppercase;white-space:nowrap;}
+
+/* ── STEPS ── */
+.step{display:none;animation:sIn .4s cubic-bezier(.22,1,.36,1) both;}
+.step.active{display:block;}
+@keyframes sIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+/* ── Q CARD ── */
+.q-card{background:var(--dark2);border:1px solid var(--border);padding:clamp(22px,4vw,32px);margin-bottom:14px;}
+.q-icon{font-size:2rem;margin-bottom:12px;}
+.q-title{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:clamp(1.1rem,3vw,1.35rem);text-transform:uppercase;
+  letter-spacing:1px;margin-bottom:5px;
+}
+.q-hint{font-size:.75rem;color:var(--muted);margin-bottom:20px;line-height:1.5;}
+
+/* ── OPTION GRID ── */
+.opt-grid{display:grid;gap:8px;}
+.opt-grid.cols2{grid-template-columns:1fr 1fr;}
+.opt-grid.cols3{grid-template-columns:1fr 1fr 1fr;}
+@media(max-width:480px){.opt-grid.cols2,.opt-grid.cols3{grid-template-columns:1fr;}}
+
+.opt-card{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;background:var(--dark3);
+  border:1px solid var(--border);cursor:pointer;transition:all .18s;
+  clip-path:polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%);
+}
+.opt-card:hover{background:rgba(0,212,212,.06);border-color:rgba(0,212,212,.22);}
+.opt-card.sel{background:rgba(0,212,212,.1);border-color:var(--cyan);}
+.opt-card.sel-multi{background:rgba(127,255,0,.08);border-color:var(--green);}
+.opt-icon-big{font-size:1.5rem;flex-shrink:0;}
+.opt-body{flex:1;}
+.opt-name{font-weight:600;font-size:.88rem;margin-bottom:2px;}
+.opt-desc{font-size:.68rem;color:var(--muted);line-height:1.4;}
+.opt-dot{
+  width:16px;height:16px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.15);flex-shrink:0;transition:all .18s;
+}
+.opt-card.sel .opt-dot{background:var(--cyan);border-color:var(--cyan);}
+.opt-card.sel-multi .opt-dot{background:var(--green);border-color:var(--green);}
+
+/* ── EMOJI SCALE ── */
+.emoji-row{display:flex;gap:6px;}
+.em-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:13px 6px;background:var(--dark3);border:1px solid var(--border);
+  cursor:pointer;transition:all .18s;
+  clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);
+}
+.em-btn:hover{background:rgba(0,212,212,.07);border-color:rgba(0,212,212,.22);}
+.em-btn.sel{background:rgba(0,212,212,.11);border-color:var(--cyan);}
+.em-btn .em{font-size:1.5rem;}
+.em-btn .lbl{font-size:.52rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:center;}
+.em-btn.sel .lbl{color:var(--cyan);}
+
+/* ── NAV BTNS ── */
+.step-nav{display:flex;gap:10px;}
+.btn-next{
+  flex:1;background:var(--grad);color:#000;
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:.95rem;letter-spacing:3px;text-transform:uppercase;
+  border:none;cursor:pointer;padding:16px;
+  clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);
+  transition:filter .2s,opacity .2s;
+}
+.btn-next:disabled{opacity:.3;cursor:not-allowed;filter:grayscale(1);}
+.btn-next:not(:disabled):hover{filter:brightness(1.1);}
+.btn-prev{
+  background:transparent;color:var(--muted);
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:.82rem;letter-spacing:2px;text-transform:uppercase;
+  border:1px solid var(--border);cursor:pointer;padding:16px 18px;
+  clip-path:polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%);
+  transition:all .2s;
+}
+.btn-prev:hover{color:var(--white);border-color:rgba(255,255,255,.2);}
+.skip{
+  display:block;text-align:center;margin-top:16px;
+  font-size:.65rem;letter-spacing:2px;color:var(--muted);
+  text-transform:uppercase;cursor:pointer;transition:color .2s;
+}
+.skip:hover{color:var(--dim);}
+
+/* ── RESULT ── */
+.result{display:none;}
+.result.show{display:block;animation:sIn .5s cubic-bezier(.22,1,.36,1) both;}
+
+.result-header{text-align:center;margin-bottom:32px;}
+.result-tag{
+  display:inline-block;font-size:.6rem;font-weight:700;letter-spacing:5px;text-transform:uppercase;
+  color:var(--cyan);border:1px solid rgba(0,212,212,.3);padding:5px 14px;margin-bottom:14px;
+}
+.result-title{
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:clamp(2rem,7vw,3.5rem);text-transform:uppercase;
+  letter-spacing:-1px;line-height:.95;margin-bottom:10px;
+}
+.result-sub{font-size:.85rem;color:var(--dim);line-height:1.7;max-width:500px;margin:0 auto;}
+
+/* SPORT CARD */
+.sport-card{
+  background:var(--dark2);border:1px solid var(--border);
+  margin-bottom:12px;overflow:hidden;
+  transition:border-color .2s;
+}
+.sport-card:first-child{border-color:rgba(0,212,212,.3);}
+.sport-rank{
+  display:flex;align-items:center;gap:10px;
+  padding:10px clamp(16px,2vw,22px);
+  border-bottom:1px solid rgba(255,255,255,.04);
+}
+.rank-badge{
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:.72rem;letter-spacing:3px;text-transform:uppercase;
+  padding:3px 10px;border:1px solid;
+}
+.rank-1{color:var(--cyan);border-color:rgba(0,212,212,.4);background:rgba(0,212,212,.07);}
+.rank-2{color:var(--green);border-color:rgba(127,255,0,.3);background:rgba(127,255,0,.05);}
+.rank-3{color:var(--yellow);border-color:rgba(212,255,0,.3);background:rgba(212,255,0,.05);}
+.rank-score{
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:.72rem;letter-spacing:2px;color:var(--muted);margin-left:auto;
+}
+.sport-body{padding:clamp(16px,2.5vw,24px);}
+.sport-top{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+.sport-icon-wrap{
+  width:56px;height:56px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:2rem;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+}
+.sport-name{
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:clamp(1.3rem,4vw,1.8rem);text-transform:uppercase;
+  line-height:1;letter-spacing:-1px;
+}
+.sport-type{font-size:.62rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:4px;}
+.sport-match-bar{height:4px;background:rgba(255,255,255,.06);margin-bottom:12px;overflow:hidden;}
+.sport-match-fill{height:100%;transition:width 1.2s cubic-bezier(.22,1,.36,1) .4s;}
+.sport-desc{font-size:.82rem;color:var(--dim);line-height:1.65;margin-bottom:14px;}
+.sport-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.sport-tag{
+  font-size:.58rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  padding:4px 10px;border:1px solid var(--border);color:var(--muted);
+}
+.sport-why{
+  margin-top:12px;padding:12px 14px;
+  background:var(--dark3);border-left:2px solid var(--cyan);
+  font-size:.78rem;color:var(--dim);line-height:1.6;
+}
+.sport-why strong{color:var(--cyan);font-weight:700;}
+
+/* RETRY */
+.btn-retry{
+  display:block;width:100%;text-align:center;
+  background:transparent;color:var(--dim);
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:.85rem;letter-spacing:3px;text-transform:uppercase;
+  border:1px solid var(--border);cursor:pointer;
+  padding:15px;margin-top:10px;
+  clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);
+  transition:all .2s;
+}
+.btn-retry:hover{color:var(--white);border-color:rgba(255,255,255,.2);}
+.btn-go-dash{
+  display:block;width:100%;text-align:center;
+  background:var(--grad);color:#000;
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:1rem;letter-spacing:4px;text-transform:uppercase;
+  border:none;cursor:pointer;padding:18px;
+  clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);
+  transition:filter .2s;text-decoration:none;
+}
+.btn-go-dash:hover{filter:brightness(1.1);}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="dashboard.html" class="btn-back">← Dashboard</a>
+  <div class="nav-logo gt">FITORA</div>
+  <div style="font-size:.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase" id="navDate"></div>
+</nav>
+
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <div class="page-head" id="quizHead">
+    <div class="page-tag">// Trovatore Sport</div>
+    <h1 class="page-title">Il Tuo<br><span class="gt">Sport</span><br>Perfetto</h1>
+    <p class="page-sub">
+      Incrociamo i tuoi desideri con le tue capacità fisiche reali. 6 domande — 3 sport su misura.
+    </p>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="prog-wrap" id="progWrap">
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <div class="prog-lbl" id="progLbl">0 / 6</div>
+  </div>
+
+  <!-- ── STEP 1: OBIETTIVO ── -->
+  <div class="step active" id="s1">
+    <div class="q-card">
+      <div class="q-icon">🎯</div>
+      <div class="q-title">Qual è il tuo obiettivo principale?</div>
+      <div class="q-hint">Scegli ciò che ti spinge ad allenarti. Guiderà l'intera raccomandazione.</div>
+      <div class="opt-grid">
+        <div class="opt-card" onclick="pick('goal','weight',this)">
+          <span class="opt-icon-big">🔥</span>
+          <div class="opt-body"><div class="opt-name">Perdere peso</div><div class="opt-desc">Bruciare calorie, ridurre massa grassa</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('goal','muscle',this)">
+          <span class="opt-icon-big">💪</span>
+          <div class="opt-body"><div class="opt-name">Tonificare e forza</div><div class="opt-desc">Aumentare massa muscolare e definizione</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('goal','cardio',this)">
+          <span class="opt-icon-big">❤️</span>
+          <div class="opt-body"><div class="opt-name">Resistenza cardiovascolare</div><div class="opt-desc">Cuore più forte, più fiato, più energia</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('goal','stress',this)">
+          <span class="opt-icon-big">🧘</span>
+          <div class="opt-body"><div class="opt-name">Ridurre stress / relax</div><div class="opt-desc">Staccare la testa, trovare equilibrio</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('goal','social',this)">
+          <span class="opt-icon-big">👥</span>
+          <div class="opt-body"><div class="opt-name">Socializzare e divertirsi</div><div class="opt-desc">Sport come momento comunitario</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('goal','compete',this)">
+          <span class="opt-icon-big">🏆</span>
+          <div class="opt-body"><div class="opt-name">Competere e migliorarsi</div><div class="opt-desc">Sfide, gare, progressione continua</div></div>
+          <div class="opt-dot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-nav">
+      <button class="btn-next" id="n1" onclick="go(2)" disabled>Avanti →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: AMBIENTE ── -->
+  <div class="step" id="s2">
+    <div class="q-card">
+      <div class="q-icon">🌍</div>
+      <div class="q-title">Dove ti piace allenarti?</div>
+      <div class="q-hint">L'ambiente condiziona la continuità — scegli quello in cui ti senti più a tuo agio.</div>
+      <div class="opt-grid cols2">
+        <div class="opt-card" onclick="pick('env','outdoor',this)">
+          <span class="opt-icon-big">🌳</span>
+          <div class="opt-body"><div class="opt-name">All'aperto</div><div class="opt-desc">Parchi, strade, natura, montagna</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('env','gym',this)">
+          <span class="opt-icon-big">🏋️</span>
+          <div class="opt-body"><div class="opt-name">Palestra</div><div class="opt-desc">Centro sportivo, struttura indoor</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('env','water',this)">
+          <span class="opt-icon-big">💧</span>
+          <div class="opt-body"><div class="opt-name">In acqua</div><div class="opt-desc">Piscina, lago, mare</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('env','home',this)">
+          <span class="opt-icon-big">🏠</span>
+          <div class="opt-body"><div class="opt-name">A casa</div><div class="opt-desc">Senza spostamenti, massima flessibilità</div></div>
+          <div class="opt-dot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-nav">
+      <button class="btn-prev" onclick="go(1)">← Indietro</button>
+      <button class="btn-next" id="n2" onclick="go(3)" disabled>Avanti →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: COMPAGNIA ── -->
+  <div class="step" id="s3">
+    <div class="q-card">
+      <div class="q-icon">🤝</div>
+      <div class="q-title">Preferisci allenarti da solo o in gruppo?</div>
+      <div class="q-hint">Non c'è risposta sbagliata — la motivazione viene dall'ambiente che senti tuo.</div>
+      <div class="opt-grid cols3">
+        <div class="opt-card" onclick="pick('company','solo',this)">
+          <span class="opt-icon-big">🧍</span>
+          <div class="opt-body"><div class="opt-name">Solo</div><div class="opt-desc">Ritmo mio, concentrazione totale</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('company','duo',this)">
+          <span class="opt-icon-big">👫</span>
+          <div class="opt-body"><div class="opt-name">Coppia / piccolo gruppo</div><div class="opt-desc">Compagno o 3–4 persone max</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('company','team',this)">
+          <span class="opt-icon-big">⚽</span>
+          <div class="opt-body"><div class="opt-name">Grande squadra</div><div class="opt-desc">Sport di gruppo, dinamica collettiva</div></div>
+          <div class="opt-dot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-nav">
+      <button class="btn-prev" onclick="go(2)">← Indietro</button>
+      <button class="btn-next" id="n3" onclick="go(4)" disabled>Avanti →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 4: CAPACITÀ / LIMITAZIONI ── -->
+  <div class="step" id="s4">
+    <div class="q-card">
+      <div class="q-icon">🩺</div>
+      <div class="q-title">Hai limitazioni fisiche?</div>
+      <div class="q-hint">Seleziona tutto ciò che si applica. L'app escluderà sport inadatti e ne proporrà di sicuri.</div>
+      <div class="opt-grid" id="limGrid">
+        <div class="opt-card" onclick="toggleLim('none',this)" id="lim-none">
+          <span class="opt-icon-big">✅</span>
+          <div class="opt-body"><div class="opt-name">Nessuna limitazione</div><div class="opt-desc">Corpo integro, pronto a tutto</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="toggleLim('knee',this)">
+          <span class="opt-icon-big">🦵</span>
+          <div class="opt-body"><div class="opt-name">Ginocchia / caviglie</div><div class="opt-desc">Dolori o instabilità articolare</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="toggleLim('back',this)">
+          <span class="opt-icon-big">🔙</span>
+          <div class="opt-body"><div class="opt-name">Schiena / lombari</div><div class="opt-desc">Ernia, sciatalgia, dolori lombari</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="toggleLim('heart',this)">
+          <span class="opt-icon-big">💓</span>
+          <div class="opt-body"><div class="opt-name">Problemi cardiaci</div><div class="opt-desc">Cardiopatia, ipertensione grave</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="toggleLim('overweight',this)">
+          <span class="opt-icon-big">⚖️</span>
+          <div class="opt-body"><div class="opt-name">Sovrappeso importante</div><div class="opt-desc">Impatto articolare da considerare</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="toggleLim('shoulder',this)">
+          <span class="opt-icon-big">🤷</span>
+          <div class="opt-body"><div class="opt-name">Spalle / polsi</div><div class="opt-desc">Tendiniti, instabilità della spalla</div></div>
+          <div class="opt-dot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-nav">
+      <button class="btn-prev" onclick="go(3)">← Indietro</button>
+      <button class="btn-next" id="n4" onclick="go(5)">Avanti →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 5: LIVELLO ── -->
+  <div class="step" id="s5">
+    <div class="q-card">
+      <div class="q-icon">📊</div>
+      <div class="q-title">Qual è il tuo livello attuale?</div>
+      <div class="q-hint">Sii onesto — un'attività fuori portata demotiva, una troppo facile annoia.</div>
+      <div class="opt-grid">
+        <div class="opt-card" onclick="pick('level','beginner',this)">
+          <span class="opt-icon-big">🌱</span>
+          <div class="opt-body"><div class="opt-name">Principiante assoluto</div><div class="opt-desc">Nessuna base sportiva, parto da zero</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('level','basic',this)">
+          <span class="opt-icon-big">🚶</span>
+          <div class="opt-body"><div class="opt-name">Ho qualche base</div><div class="opt-desc">Sport occasionale, non costante</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('level','mid',this)">
+          <span class="opt-icon-big">🏃</span>
+          <div class="opt-body"><div class="opt-name">Intermedio</div><div class="opt-desc">Mi alleno regolarmente da 1–2 anni</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('level','advanced',this)">
+          <span class="opt-icon-big">⚡</span>
+          <div class="opt-body"><div class="opt-name">Avanzato / Ex sportivo</div><div class="opt-desc">Allenamento serio, gare o ex agonismo</div></div>
+          <div class="opt-dot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-nav">
+      <button class="btn-prev" onclick="go(4)">← Indietro</button>
+      <button class="btn-next" id="n5" onclick="go(6)" disabled>Avanti →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 6: TEMPO ── -->
+  <div class="step" id="s6">
+    <div class="q-card">
+      <div class="q-icon">⏰</div>
+      <div class="q-title">Quanto tempo puoi dedicare?</div>
+      <div class="q-hint">La frequenza e la durata determina quale sport è sostenibile nel lungo periodo.</div>
+      <div class="opt-grid">
+        <div class="opt-card" onclick="pick('time','low',this)">
+          <span class="opt-icon-big">🕐</span>
+          <div class="opt-body"><div class="opt-name">1–2 volte / settimana</div><div class="opt-desc">30–45 minuti a sessione</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('time','mid',this)">
+          <span class="opt-icon-big">🕒</span>
+          <div class="opt-body"><div class="opt-name">3–4 volte / settimana</div><div class="opt-desc">45–60 minuti a sessione</div></div>
+          <div class="opt-dot"></div>
+        </div>
+        <div class="opt-card" onclick="pick('time','high',this)">
+          <span class="opt-icon-big">🕔</span>
+          <div class="opt-body"><div class="opt-name">5+ volte / settimana</div><div class="opt-desc">Allenamento quotidiano o quasi</div></div>
+          <div class="opt-dot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-nav">
+      <button class="btn-prev" onclick="go(5)">← Indietro</button>
+      <button class="btn-next" id="n6" onclick="calcSport()" disabled>Analizza →</button>
+    </div>
+    <span class="skip" onclick="skipQuiz()">Salta e mostra un risultato generico</span>
+  </div>
+
+  <!-- ── RESULT ── -->
+  <div class="result" id="result">
+
+    <div class="result-header">
+      <div class="result-tag">// Analisi completata</div>
+      <h2 class="result-title">I Tuoi<br><span class="gt">Sport</span><br>Ideali</h2>
+      <p class="result-sub" id="resultSub">Basato sui tuoi obiettivi, capacità fisiche e preferenze di vita.</p>
+    </div>
+
+    <div id="sportCards"></div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+      <a href="check-in.html" class="btn-go-dash">⚡ Inizia ad Allenarti</a>
+      <button class="btn-retry" onclick="retryQuiz()">↺ Rifai il Questionario</button>
+    </div>
+
+  </div>
+
+</div><!-- /wrapper -->
+
+<script>
+/* ══ STATE ══ */
+const A = { goal:null, env:null, company:null, lim:[], level:null, time:null };
+let cur = 1;
+const TOTAL = 6;
+
+document.getElementById('navDate').textContent =
+  new Date().toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'}).toUpperCase();
+
+/* ══ PROGRESS ══ */
+function setProgress(step) {
+  const pct = Math.round((step-1)/TOTAL*100);
+  document.getElementById('progFill').style.width = pct+'%';
+  document.getElementById('progLbl').textContent  = (step-1)+' / '+TOTAL;
+}
+
+/* ══ NAV ══ */
+function go(step) {
+  document.getElementById('s'+cur).classList.remove('active');
+  cur = step;
+  document.getElementById('s'+cur).classList.add('active');
+  setProgress(cur);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ══ INPUT ══ */
+function pick(key, val, el) {
+  A[key] = val;
+  el.closest('.opt-grid').querySelectorAll('.opt-card').forEach(c => {
+    c.classList.remove('sel'); c.classList.remove('sel-multi');
+  });
+  el.classList.add('sel');
+  const nextMap = {goal:'n1',env:'n2',company:'n3',level:'n5',time:'n6'};
+  if (nextMap[key]) document.getElementById(nextMap[key]).disabled = false;
+}
+
+function toggleLim(val, el) {
+  if (val === 'none') {
+    document.querySelectorAll('#limGrid .opt-card').forEach(c => {
+      c.classList.remove('sel'); c.classList.remove('sel-multi');
+    });
+    A.lim = [];
+    el.classList.add('sel');
+    A.lim = ['none'];
+  } else {
+    document.getElementById('lim-none').classList.remove('sel');
+    A.lim = A.lim.filter(v => v !== 'none');
+    if (el.classList.contains('sel-multi')) {
+      el.classList.remove('sel-multi');
+      A.lim = A.lim.filter(v => v !== val);
+    } else {
+      el.classList.add('sel-multi');
+      A.lim.push(val);
+    }
+  }
+}
+
+/* ══ SPORTS DATABASE ══ */
+const SPORTS = [
+  {
+    id:'run', name:'Corsa', icon:'🏃', type:'Endurance · Outdoor',
+    desc:'La corsa è lo sport più accessibile al mondo: bastano le scarpe giuste. Brucia moltissime calorie, migliora il sistema cardiovascolare e la mente. Può essere solitaria o con la community di runner.',
+    tags:['Alto impatto calorico','No attrezzatura','Outdoor o treadmill','Progressivo'],
+    scores: { goal:{weight:9,cardio:10,compete:8,stress:6,social:4,muscle:3},
+              env:{outdoor:10,gym:6,water:0,home:2},
+              company:{solo:10,duo:8,team:4},
+              level:{beginner:6,basic:8,mid:10,advanced:10},
+              time:{low:6,mid:9,high:10},
+              lim:{knee:-8,back:-3,heart:-5,overweight:-6,shoulder:0,none:0} }
+  },
+  {
+    id:'swim', name:'Nuoto', icon:'🏊', type:'Endurance · Full-Body · Acqua',
+    desc:'Il nuoto è lo sport a basso impatto articolare per eccellenza. Perfetto per chi ha problemi alle ginocchia o alla schiena. Lavora tutti i muscoli simultaneamente e il consumo calorico è elevato.',
+    tags:['Zero impatto','Full-body','Riabilitativo','Ottimo per chi ha limitazioni'],
+    scores: { goal:{weight:9,cardio:10,stress:8,muscle:7,compete:7,social:4},
+              env:{water:10,outdoor:3,gym:4,home:0},
+              company:{solo:9,duo:7,team:5},
+              level:{beginner:6,basic:8,mid:10,advanced:10},
+              time:{low:7,mid:9,high:9},
+              lim:{knee:5,back:4,heart:3,overweight:5,shoulder:-4,none:0} }
+  },
+  {
+    id:'gym', name:'Palestra / Pesi', icon:'🏋️', type:'Forza · Ipertrofia · Indoor',
+    desc:'Il fitness in palestra offre il controllo totale sullo stimolo. Macchine, pesi liberi, kettlebell: puoi isolare ogni muscolo, monitorare ogni variabile e progredire in modo scientifico e misurato.',
+    tags:['Alta progressione','Controllo totale','Ipertrofia','Forza funzionale'],
+    scores: { goal:{muscle:10,weight:8,compete:8,cardio:5,stress:5,social:4},
+              env:{gym:10,outdoor:0,water:0,home:4},
+              company:{solo:9,duo:7,team:3},
+              level:{beginner:5,basic:7,mid:10,advanced:10},
+              time:{low:6,mid:10,high:10},
+              lim:{knee:-2,back:-5,heart:-3,overweight:-2,shoulder:-4,none:0} }
+  },
+  {
+    id:'cycling', name:'Ciclismo', icon:'🚴', type:'Endurance · Basso impatto',
+    desc:'Il ciclismo combina cardio elevato con impatto articolare quasi zero. Outdoor regala paesaggi e senso di libertà, la cyclette garantisce costanza. Ideale per chi vuole dimagrire senza affaticare le ginocchia.',
+    tags:['Basso impatto','Calorico','Outdoor o indoor','Antistress'],
+    scores: { goal:{weight:9,cardio:9,stress:8,compete:7,social:5,muscle:4},
+              env:{outdoor:10,gym:6,water:0,home:5},
+              company:{solo:8,duo:9,team:5},
+              level:{beginner:7,basic:8,mid:9,advanced:9},
+              time:{low:7,mid:9,high:10},
+              lim:{knee:4,back:-2,heart:-3,overweight:4,shoulder:0,none:0} }
+  },
+  {
+    id:'yoga', name:'Yoga / Pilates', icon:'🧘', type:'Flessibilità · Mente-corpo',
+    desc:'Yoga e Pilates sviluppano forza del core, flessibilità, equilibrio e — soprattutto — la connessione mente-corpo. Riducono il cortisolo, migliorano la postura e prevengono infortuni per qualsiasi altro sport.',
+    tags:['Antistress','Mobilità','Core forte','Prevenzione infortuni'],
+    scores: { goal:{stress:10,muscle:6,weight:5,cardio:4,compete:3,social:5},
+              env:{gym:8,home:10,outdoor:7,water:0},
+              company:{solo:9,duo:7,team:5},
+              level:{beginner:10,basic:9,mid:7,advanced:5},
+              time:{low:8,mid:8,high:7},
+              lim:{knee:5,back:6,heart:6,overweight:5,shoulder:3,none:0} }
+  },
+  {
+    id:'football', name:'Calcio', icon:'⚽', type:'Squadra · Cardio · Sociale',
+    desc:'Il calcio è lo sport più praticato al mondo per un motivo: il senso di squadra è ineguagliabile. Allenamento cardio elevato, esplosività, coordinazione. La partitella settimanale vale più di qualsiasi abbonamento in palestra.',
+    tags:['Alta socialità','Cardio esplosivo','Coordinazione','Spirito di squadra'],
+    scores: { goal:{social:10,compete:9,cardio:8,weight:7,stress:6,muscle:5},
+              env:{outdoor:10,gym:2,water:0,home:0},
+              company:{team:10,duo:4,solo:0},
+              level:{beginner:5,basic:7,mid:9,advanced:9},
+              time:{low:5,mid:8,high:9},
+              lim:{knee:-7,back:-3,heart:-6,overweight:-5,shoulder:-1,none:0} }
+  },
+  {
+    id:'tennis', name:'Tennis / Padel', icon:'🎾', type:'Racchetta · Tecnica · Sociale',
+    desc:'Tennis e Padel sono esplosi per un motivo: uniscono agonismo, tecnica, socialità e una curva di apprendimento che non annoia mai. Il Padel in particolare è accessibile a tutti i livelli fin da subito.',
+    tags:['Tecnica e strategia','Agonismo','Socialità','Coordinazione'],
+    scores: { goal:{compete:10,social:9,cardio:8,weight:7,stress:7,muscle:5},
+              env:{outdoor:9,gym:6,water:0,home:0},
+              company:{duo:10,team:7,solo:3},
+              level:{beginner:5,basic:7,mid:9,advanced:10},
+              time:{low:6,mid:9,high:10},
+              lim:{knee:-5,back:-4,heart:-4,overweight:-3,shoulder:-6,none:0} }
+  },
+  {
+    id:'boxing', name:'Boxe / Arti Marziali', icon:'🥊', type:'Combattimento · Forza · Disciplina',
+    desc:'La boxe brucia fino a 700 kcal/ora, scarica lo stress meglio di qualsiasi altra attività e costruisce una disciplina mentale unica. Le arti marziali aggiungono la dimensione tecnica e culturale.',
+    tags:['Massimo brucia-grassi','Antistress','Autodifesa','Disciplina mentale'],
+    scores: { goal:{weight:10,stress:10,compete:9,muscle:8,cardio:8,social:5},
+              env:{gym:10,outdoor:4,water:0,home:5},
+              company:{solo:7,duo:8,team:5},
+              level:{beginner:5,basic:7,mid:9,advanced:10},
+              time:{low:5,mid:8,high:10},
+              lim:{knee:-4,back:-4,heart:-6,overweight:-3,shoulder:-5,none:0} }
+  },
+  {
+    id:'hiking', name:'Trekking / Escursionismo', icon:'🥾', type:'Outdoor · Resistenza · Natura',
+    desc:'Il trekking è il modo più sostenibile per rimanere attivi per tutta la vita. Basso impatto, alto beneficio mentale, contatto con la natura. Da una passeggiata in collina a una via ferrata — scala con te.',
+    tags:['Basso impatto','Natura','Mentale','Alta accessibilità'],
+    scores: { goal:{stress:10,weight:7,cardio:6,social:7,compete:4,muscle:4},
+              env:{outdoor:10,gym:0,water:0,home:0},
+              company:{solo:9,duo:10,team:7},
+              level:{beginner:10,basic:9,mid:7,advanced:5},
+              time:{low:9,mid:8,high:6},
+              lim:{knee:-2,back:-2,heart:3,overweight:2,shoulder:0,none:0} }
+  },
+  {
+    id:'crossfit', name:'CrossFit / Functional', icon:'💥', type:'Forza · Condizionamento · Gruppo',
+    desc:'CrossFit combina forza, resistenza ed esplosività in sessioni brevi e intense. La comunità dei box è tra le più motivanti nello sport. Non è per tutti — ma chi lo prova tende a rimanerci.',
+    tags:['Alta intensità','Comunità forte','Variabile','Sfidante'],
+    scores: { goal:{muscle:9,cardio:9,weight:9,compete:10,social:8,stress:5},
+              env:{gym:10,outdoor:5,water:0,home:2},
+              company:{team:9,duo:7,solo:4},
+              level:{beginner:2,basic:5,mid:8,advanced:10},
+              time:{low:4,mid:8,high:10},
+              lim:{knee:-7,back:-7,heart:-7,overweight:-5,shoulder:-6,none:0} }
+  },
+  {
+    id:'dance', name:'Danza / Zumba', icon:'💃', type:'Cardio · Ritmo · Espressione',
+    desc:'La danza è cardio che non sembra cardio: il divertimento offusca la fatica. Zumba, bachata, hip-hop — qualsiasi stile brucia calorie, migliora la coordinazione e l\'autostima.',
+    tags:['Divertente','Cardio nascosto','Coordinazione','Espressione'],
+    scores: { goal:{weight:8,stress:9,social:9,cardio:8,compete:4,muscle:5},
+              env:{gym:9,home:7,outdoor:4,water:0},
+              company:{team:9,duo:8,solo:5},
+              level:{beginner:9,basic:9,mid:7,advanced:5},
+              time:{low:7,mid:9,high:9},
+              lim:{knee:-3,back:-2,heart:-2,overweight:2,shoulder:0,none:0} }
+  },
+  {
+    id:'climbing', name:'Arrampicata', icon:'🧗', type:'Forza · Tecnica · Mentale',
+    desc:'L\'arrampicata è problem-solving fisico: ogni percorso è un puzzle. Sviluppa forza relativa, flessibilità, concentrazione e supera la paura. Palestra o falesia — due mondi complementari.',
+    tags:['Forza relativa','Mentale','Tecnica','Comunità giovane'],
+    scores: { goal:{compete:9,muscle:8,stress:8,social:7,weight:6,cardio:5},
+              env:{gym:8,outdoor:9,water:0,home:0},
+              company:{solo:7,duo:9,team:6},
+              level:{beginner:5,basic:7,mid:9,advanced:10},
+              time:{low:6,mid:9,high:10},
+              lim:{knee:2,back:-3,heart:-2,overweight:-4,shoulder:-8,none:0} }
+  },
+];
+
+/* ══ ALGORITHM ══ */
+function calcSport() {
+  const scored = SPORTS.map(sp => {
+    let s = 0;
+    // Objective (weight 35%)
+    s += (sp.scores.goal[A.goal] || 0) * 3.5;
+    // Environment (weight 20%)
+    s += (sp.scores.env[A.env] || 0) * 2.0;
+    // Company (weight 15%)
+    s += (sp.scores.company[A.company] || 0) * 1.5;
+    // Level (weight 15%)
+    s += (sp.scores.level[A.level] || 0) * 1.5;
+    // Time (weight 10%)
+    s += (sp.scores.time[A.time] || 0) * 1.0;
+    // Limitations (penalties)
+    A.lim.filter(l => l !== 'none').forEach(l => { s += (sp.scores.lim[l] || 0) * 2.5; });
+
+    // Normalize to 0-100
+    const maxPossible = 3.5*10 + 2.0*10 + 1.5*10 + 1.5*10 + 1.0*10;
+    return { ...sp, score: Math.max(0, Math.round((s / maxPossible) * 100)) };
+  });
+
+  scored.sort((a,b) => b.score - a.score);
+  showResult(scored.slice(0,3));
+}
+
+function skipQuiz() {
+  // Fill neutral defaults
+  if (!A.goal)    A.goal    = 'weight';
+  if (!A.env)     A.env     = 'outdoor';
+  if (!A.company) A.company = 'solo';
+  if (!A.lim.length) A.lim  = ['none'];
+  if (!A.level)   A.level   = 'basic';
+  if (!A.time)    A.time    = 'mid';
+  calcSport();
+}
+
+/* ══ RENDER RESULT ══ */
+const RANK_CLASS = ['rank-1','rank-2','rank-3'];
+const RANK_LABEL = ['#1 MATCH PERFETTO','#2 OTTIMA SCELTA','#3 ALTERNATIVA'];
+const BAR_COLORS = ['var(--grad)','linear-gradient(90deg,#7fff00,#00d4d4)','linear-gradient(90deg,#d4ff00,#7fff00)'];
+
+function showResult(top3) {
+  document.getElementById('s'+cur).classList.remove('active');
+  document.getElementById('progWrap').style.display    = 'none';
+  document.getElementById('quizHead').style.display    = 'none';
+
+  // Save top sport + answers for workout/nutrition pages
+  try {
+    localStorage.setItem('fitora_sport', JSON.stringify({
+      id: top3[0].id, name: top3[0].name, icon: top3[0].icon,
+      goal: A.goal, level: A.level, lim: A.lim, env: A.env
+    }));
+  } catch(e) {}
+
+  const goalLabels = {weight:'bruciare grassi',muscle:'tonificare',cardio:'migliorare la resistenza',stress:'ridurre lo stress',social:'socializzare',compete:'competere'};
+  document.getElementById('resultSub').textContent =
+    `Obiettivo: ${goalLabels[A.goal]||'generale'} · Livello: ${A.level||'base'} · ${A.lim.includes('none')?'Nessuna limitazione':A.lim.length+' limitazioni considerate'}`;
+
+  const container = document.getElementById('sportCards');
+  container.innerHTML = top3.map((sp,i) => `
+    <div class="sport-card">
+      <div class="sport-rank">
+        <span class="rank-badge ${RANK_CLASS[i]}">${RANK_LABEL[i]}</span>
+        <span class="rank-score">${sp.score}% compatibile</span>
+      </div>
+      <div class="sport-body">
+        <div class="sport-top">
+          <div class="sport-icon-wrap">${sp.icon}</div>
+          <div>
+            <div class="sport-name">${sp.name}</div>
+            <div class="sport-type">${sp.type}</div>
+          </div>
+        </div>
+        <div class="sport-match-bar">
+          <div class="sport-match-fill" style="width:0%;background:${BAR_COLORS[i]}" data-w="${sp.score}%"></div>
+        </div>
+        <p class="sport-desc">${sp.desc}</p>
+        <div class="sport-tags">${sp.tags.map(t=>`<span class="sport-tag">${t}</span>`).join('')}</div>
+        <div class="sport-why">${buildWhy(sp)}</div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('result').classList.add('show');
+
+  // Animate bars after render
+  setTimeout(() => {
+    document.querySelectorAll('.sport-match-fill').forEach(el => {
+      el.style.width = el.dataset.w;
+    });
+  }, 100);
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function buildWhy(sp) {
+  const parts = [];
+  const goalMap = {weight:'bruciare calorie',muscle:'costruire muscolo',cardio:'potenziare il cuore',stress:'liberare la mente',social:'incontrare persone',compete:'migliorarti costantemente'};
+  parts.push(`<strong>Perché per te:</strong> Vuoi ${goalMap[A.goal]||'allenarti'} — questo sport lo fa ${sp.scores.goal[A.goal]>=8?'meglio di quasi tutti gli altri':'in modo efficace'}.`);
+
+  if (A.lim.includes('knee') && sp.scores.lim.knee >= 0) parts.push('✓ Adatto per chi ha problemi alle ginocchia.');
+  if (A.lim.includes('back') && sp.scores.lim.back >= 0) parts.push('✓ Sicuro per la schiena.');
+  if (A.lim.includes('overweight') && sp.scores.lim.overweight >= 0) parts.push('✓ Basso impatto articolare.');
+  if (A.level === 'beginner' && sp.scores.level.beginner >= 8) parts.push('✓ Perfetto per iniziare da zero.');
+  if (A.time === 'low' && sp.scores.time.low >= 7) parts.push('✓ Risultati visibili anche con 1–2 sessioni settimanali.');
+
+  return parts.join(' ');
+}
+
+function retryQuiz() {
+  // Reset
+  Object.assign(A, {goal:null,env:null,company:null,lim:[],level:null,time:null});
+  document.querySelectorAll('.opt-card').forEach(c=>{c.classList.remove('sel');c.classList.remove('sel-multi');});
+  ['n1','n2','n3','n5','n6'].forEach(id=>document.getElementById(id).disabled=true);
+
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('progWrap').style.display = '';
+  document.getElementById('quizHead').style.display = '';
+  cur = 1;
+  document.getElementById('s1').classList.add('active');
+  setProgress(1);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
