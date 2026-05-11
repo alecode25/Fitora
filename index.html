@@ -9,24 +9,65 @@
 </head>
 <body>
 
-<!-- ====================== NAV ====================== -->
-<nav id="mainNav">
-  <a href="#hero" class="nav-logo grad-text">FITORA</a>
+<!-- ====================== NEW NAV ====================== -->
+<header class="main-header" id="mainHeader">
+  <div class="nav-container">
+    <a href="#hero" class="nav-logo grad-text">FITORA</a>
+    
+    <nav class="nav-menu">
+      <a href="#beyond">Metodo</a>
+      <a href="#features">Features</a>
+      <a href="#vision">Tech</a>
+      <a href="#community">Community</a>
+      <a href="#future">Futuro</a>
+    </nav>
 
+    <div class="nav-actions">
+      <div class="nav-profile-btn" id="profileTrigger">
+        <img src="https://ui-avatars.com/api/?name=User&background=00d4d4&color=000" alt="Profilo" id="navAvatar">
+      </div>
+      <a href="dashboard.html" class="nav-cta-btn">⚡ Dashboard</a>
+      <a href="register.html" class="nav-cta-btn" style="background: rgba(255,255,255,0.1); color: #fff !important;">Registrati</a>
+    </div>
 
-  <button class="hamburger" id="hamburger" aria-label="Menu">
-    <span></span><span></span><span></span>
-  </button>
-</nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle Navigation">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
 
-<!-- <div class="mobile-menu" id="mobileMenu">
-  <a href="#beyond" onclick="closeMenu()">Il Metodo</a>
-  <a href="#features" onclick="closeMenu()">Features</a>
-  <a href="#vision" onclick="closeMenu()">Tecnologia</a>
-  <a href="#community" onclick="closeMenu()">Community</a>
-  <a href="#future" onclick="closeMenu()">Futuro</a>
-  <a href="app.html" class="mob-cta" onclick="closeMenu()">⚡ Prova Ora FITORA</a>
-</div> -->
+<div class="mobile-overlay" id="mobileOverlay">
+  <nav class="mobile-links">
+    <div class="mobile-profile-section" id="mobileProfileTrigger">
+      <img src="https://ui-avatars.com/api/?name=User&background=00d4d4&color=000" alt="Avatar">
+      <span class="grad-text">Il Tuo Profilo</span>
+      <p>Visualizza e modifica dati</p>
+    </div>
+    <a href="#beyond">Metodo</a>
+    <a href="#features">Features</a>
+    <a href="#vision">Tech</a>
+    <a href="#community">Community</a>
+    <a href="dashboard.html" class="grad-text">Dashboard ⚡</a>
+  </nav>
+</div>
+
+<!-- ====================== PROFILE MODAL ====================== -->
+<div class="profile-modal" id="profileModal">
+  <div class="profile-content">
+    <button class="close-modal" id="closeProfile">×</button>
+    <h2 class="grad-text">Il Tuo Profilo</h2>
+    <div class="profile-avatar-edit">
+      <img src="https://ui-avatars.com/api/?name=User&background=00d4d4&color=000" alt="Avatar">
+      <button class="edit-avatar-btn">Cambia Foto</button>
+    </div>
+    <div class="profile-data-grid">
+      <div class="data-item"><label>Peso (kg)</label><input type="number" value="75" id="userWeight"></div>
+      <div class="data-item"><label>Altezza (cm)</label><input type="number" value="180"></div>
+      <div class="data-item"><label>Età</label><input type="number" value="28"></div>
+    </div>
+    <button class="nav-cta-btn" style="width: 100%; margin-top: 20px;" onclick="alert('Dati salvati!')">Salva Modifiche</button>
+  </div>
+</div>
 
 <!-- ====================== HERO ====================== -->
 <section id="hero">
@@ -40,7 +81,7 @@
       "Il tuo corpo parla, noi ti insegniamo ad ascoltarlo e a trasformarlo."
     </p>
     <div class="hero-btns">
-      <a href="app.html" class="btn-cta">⚡ Prova Ora FITORA</a>
+      <a href="dashboard.html" class="btn-cta">⚡ Prova Ora FITORA</a>
       <a href="#beyond" class="btn-ghost">Scopri di più ↓</a>
     </div>
   </div>
@@ -313,8 +354,10 @@
     <p class="cta-sub">
       Il percorso verso il tuo sé migliore inizia con un'analisi onesta del tuo corpo. Siamo pronti quando lo sei tu.
     </p>
-    <a href="https://alecode25.github.io/skeleton" class="btn-cta-xl">⚡ Prova Ora FITORA</a>
-  <a href="dashboard.html" class="btn-cta-xl">Accedi al Dashboard</a>
+    <div class="cta-btns">
+      <a href="https://alecode25.github.io/skeleton" class="btn-cta-xl">⚡ Prova Ora FITORA</a>
+      <a href="dashboard.html" class="btn-cta-xl">Accedi al Dashboard</a>
+    </div>
   </div>
  
 </section>

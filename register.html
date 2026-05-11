@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FITORA – Registrati</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  body {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 40px 20px;
+    background: radial-gradient(circle at center, #0c1f1f 0%, #080808 100%);
+  }
+  .reg-card {
+    background: var(--dark2); border: 1px solid rgba(0, 212, 212, 0.15);
+    padding: clamp(30px, 5vw, 50px); width: 100%; max-width: 600px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    animation: slideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .reg-title {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
+    font-size: 2.5rem; text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 30px; text-align: center;
+  }
+  .reg-form { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .input-group { display: flex; flex-direction: column; gap: 8px; animation: fadeIn 1s both; }
+  .input-group.full { grid-column: span 2; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  
+  label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--cyan); font-weight: 700; }
+  input, select {
+    background: var(--dark3); border: 1px solid rgba(255,255,255,0.1);
+    padding: 12px 16px; color: #fff; font-family: inherit;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  input:focus, select:focus {
+    outline: none; border-color: var(--cyan);
+    box-shadow: 0 0 10px rgba(0, 212, 212, 0.2);
+  }
+  .btn-reg {
+    grid-column: span 2; margin-top: 20px;
+    background: var(--grad); color: #000;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
+    font-size: 1.2rem; text-transform: uppercase; letter-spacing: 3px;
+    padding: 16px; border: none; cursor: pointer;
+    clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+    transition: transform 0.2s, filter 0.2s;
+  }
+  .btn-reg:hover { transform: scale(1.02); filter: brightness(1.1); }
+  
+  @media (max-width: 600px) {
+    .reg-form { grid-template-columns: 1fr; }
+    .input-group.full { grid-column: span 1; }
+    .btn-reg { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="reg-card">
+  <h1 class="reg-title grad-text">Unisciti a FITORA</h1>
+  <form class="reg-form" action="dashboard.html">
+    <div class="input-group" style="animation-delay: 0.1s">
+      <label>Nome</label>
+      <input type="text" placeholder="Es. Mario" required>
+    </div>
+    <div class="input-group" style="animation-delay: 0.2s">
+      <label>Cognome</label>
+      <input type="text" placeholder="Es. Rossi" required>
+    </div>
+    <div class="input-group" style="animation-delay: 0.3s">
+      <label>Età</label>
+      <input type="number" placeholder="Anni" required>
+    </div>
+    <div class="input-group" style="animation-delay: 0.4s">
+      <label>Peso (kg)</label>
+      <input type="number" step="0.1" placeholder="Es. 75.5" required>
+    </div>
+    <div class="input-group" style="animation-delay: 0.5s">
+      <label>Altezza (cm)</label>
+      <input type="number" placeholder="Es. 180" required>
+    </div>
+    <div class="input-group" style="animation-delay: 0.6s">
+      <label>Livello Attività</label>
+      <select required>
+        <option value="sedentario">Sedentario</option>
+        <option value="leggero">Attività Leggera</option>
+        <option value="moderato">Moderato</option>
+        <option value="attivo">Molto Attivo</option>
+        <option value="atleta">Atleta</option>
+      </select>
+    </div>
+    <div class="input-group full" style="animation-delay: 0.7s">
+      <label>Email</label>
+      <input type="email" placeholder="latuamail@esempio.com" required>
+    </div>
+    <div class="input-group full" style="animation-delay: 0.8s">
+      <label>Password</label>
+      <input type="password" placeholder="••••••••" required>
+    </div>
+    <button type="submit" class="btn-reg">Crea Account ⚡</button>
+  </form>
+  <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: rgba(255,255,255,0.4);">
+    Hai già un account? <a href="dashboard.html" style="color: var(--cyan);">Accedi</a>
+  </p>
+</div>
+
+<script>
+  // Semplice effetto hover parallasse sulla card
+  const card = document.querySelector('.reg-card');
+  document.addEventListener('mousemove', (e) => {
+    const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+    const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+    card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+  });
+  
+  // Reset rotazione quando il mouse esce
+  document.addEventListener('mouseleave', () => {
+    card.style.transform = `rotateY(0deg) rotateX(0deg)`;
+    card.style.transition = "all 0.5s ease";
+  });
+  
+  // Rimuovi transizione all'entrata per fluidità
+  document.addEventListener('mouseenter', () => {
+    card.style.transition = "none";
+  });
+</script>
+
+</body>
+</html>
