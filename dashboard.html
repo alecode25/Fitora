@@ -182,9 +182,13 @@ nav {
 .map-hud {
   position: absolute; bottom: 0; left: 0; right: 0;
   background: linear-gradient(to top, rgba(6,6,6,.95) 0%, rgba(6,6,6,.5) 60%, transparent 100%);
+  background: rgba(8, 8, 8, 0.9);
+  border-top: 1px solid var(--border-cyan);
   padding: clamp(14px, 2vw, 20px);
   z-index: 20;
+  z-index: 1000;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+  backdrop-filter: blur(8px);
 }
 .hud-metrics { display: flex; gap: clamp(16px, 3vw, 28px); }
 .hud-metric { }
@@ -209,15 +213,20 @@ nav {
   font-size: clamp(.78rem, 1.3vw, .9rem); letter-spacing: 2.5px; text-transform: uppercase;
   border: none; cursor: pointer; padding: clamp(12px, 1.8vw, 16px) clamp(16px, 2.5vw, 24px);
   clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
   transition: filter .2s, transform .2s, opacity .2s;
   white-space: nowrap; position: relative; overflow: hidden;
   min-width: 80px; min-height: 48px;
+  min-width: 90px; min-height: 48px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
 }
 .ctrl-btn:disabled { opacity: .3; cursor: not-allowed; }
+.ctrl-btn:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(1); }
 .ctrl-btn:not(:disabled):hover { filter: brightness(1.15); transform: scale(1.03); }
 .ctrl-btn:not(:disabled):active { transform: scale(.97); }
 
 .btn-start { background: var(--grad); color: #000; }
+.btn-start { background: var(--grad) !important; color: #000 !important; border: 2px solid #000 !important; font-weight: 900 !important; }
 .btn-start.pulse { animation: btnGlow 1.5s ease-in-out infinite; } /* Rimosso il background qui per evitare override */
 @keyframes btnGlow { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.25) drop-shadow(0 0 10px rgba(127,255,0,.5))} }
 
@@ -1348,12 +1357,17 @@ window.onload = function init() {
     document.getElementById('pointCount').textContent = `${session.coords.length} punti`;
   } else {
     if (navigator.geolocation && navigator.permissions) {
-      navigator.permissions.query({name:'geolocation'}).then(result => {
-        if (result.state === 'granted') {
-          document.getElementById('permOverlay').classList.add('hide');
-          setUIState('idle');
-        }
-      });
+        navigator.permissions.query({name:'geolocation'}).then(result => {
+            if (result.state === 'granted') {
+                document.getElementById('permOverlay').classList.add('hide');
+                setUIState('idle');
+            } else if (result.state === 'denied') {
+                // Se è già negato, mostriamo istruzioni specifiche
+                document.querySelector('.perm-title').textContent = "GPS Disattivato";
+                document.querySelector('.perm-text').innerHTML = 
+                  "Sembra che l'accesso alla posizione sia bloccato. Vai nelle impostazioni del tuo telefono/browser per consentire a FITORA di accedere al GPS.";
+            }
+        });
     } else {
       document.getElementById('permOverlay').classList.add('hide');
       setBanner('error', '❌ Geolocalizzazione non supportata');
