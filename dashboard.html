@@ -1024,13 +1024,12 @@ body::after {
 /* ══════════════════════════
    CONSTANTS
 ══════════════════════════ */
-const WEIGHT_KG          = 70;
 const MET_RUNNING        = 8.0;
 const LS_KEY             = 'fitora_session_v3';
 const LS_HIST            = 'fitora_history_v1';
 const LS_MUSIC           = 'fitora_music_id';
 const PACE_SAMPLES       = 40;
-const ACCURACY_THRESHOLD = 50;   // m — reject GPS fixes worse than this
+const ACCURACY_THRESHOLD = 60;   // m — limite di accuratezza accettabile
 const ROLLING_PACE_WIN   = 30;   // s — rolling window for current pace
 
 /* ══════════════════════════
@@ -1084,10 +1083,16 @@ function haversine(a,b,c,d) {
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 function calcCalories(km) {
-  const el = getElapsed();
-  const spd = km>0&&el>0 ? km/(el/3600) : 8;
-  const met = spd<4?3.5:spd<7?6:spd<10?8:spd<13?10:12;
-  return met*WEIGHT_KG*(el/3600);
+  // Recupera il peso reale dell'utente dal profilo, altrimenti usa 70kg di default
+  let userWeight = 70;
+  try {
+    const profile = JSON.parse(localStorage.getItem('fitora_profile'));
+    if (profile && profile.weight) userWeight = parseFloat(profile.weight);
+  } catch(e) {}
+
+  // Formula scientifica realistica per la corsa: 0.9 kcal per kg di peso per km.
+  // È il gold standard utilizzato dalle app professionali per atleti.
+  return 0.9 * userWeight * km;
 }
 function getElapsed() {
   if (!session.startTime) return session.elapsedBefore;
@@ -1202,8 +1207,19 @@ function initMap() {
 }
 function startGPSWatch() {
   if (!navigator.geolocation) { setBanner('error','❌ GPS non supportato'); return; }
-  setBanner('idle','🛰️ Acquisizione segnale GPS…');
-  watchId = navigator.geolocation.watchPosition(onGPSUpdate,onGPSError,{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
+  
+  if (watchId !== null) stopGPSWatch();
+
+  setBanner('idle','🛰️ Ricerca segnale GPS…');
+  
+  // Opzioni ottimizzate per stabilità cross-device
+  const gpsOptions = {
+    enableHighAccuracy: true,
+    maximumAge: 0,         // Forza il chip a leggere una nuova posizione, non usare cache
+    timeout: 10000         // Attendi max 10 secondi per il fix
+  };
+
+  watchId = navigator.geolocation.watchPosition(onGPSUpdate, onGPSError, gpsOptions);
 }
 function stopGPSWatch() {
   if (watchId!==null) { navigator.geolocation.clearWatch(watchId); watchId=null; }
@@ -1215,8 +1231,6 @@ function onGPSUpdate(pos) {
   const accEl = document.getElementById('accBadge');
   accEl.textContent = `±${Math.round(accuracy)}m`;
   accEl.style.color = accuracy<10 ? 'var(--green)' : accuracy<20 ? 'var(--yellow)' : accuracy<40 ? 'var(--orange)' : 'var(--red)';
-
-  if (appState!=='tracking') return;
 
   // Always update marker (even poor accuracy) — circle shows uncertainty
   if (map) {
@@ -1232,6 +1246,8 @@ function onGPSUpdate(pos) {
     map.panTo(ll);
   }
 
+  if (appState!=='tracking') return;
+
   // Poor accuracy: update position but skip route/distance recording
   if (accuracy > ACCURACY_THRESHOLD) {
     setBanner('active',`🛰️ Segnale debole (±${Math.round(accuracy)}m)…`);
@@ -1245,7 +1261,14 @@ function onGPSUpdate(pos) {
 
   if (prev) {
     const seg = haversine(prev.lat,prev.lng,latitude,longitude);
-    if (seg>=0.002&&seg<=0.200) {
+    const timeDiff = (pos.timestamp - prev.ts) / 1000;
+    const calcSpeed = timeDiff > 0 ? (seg * 3600) / timeDiff : 0;
+
+    // FILTRI PER DATI REALI:
+    // 1. seg >= 0.001 -> Almeno 1 metro (elimina il "rumore" mentre si è fermi)
+    // 2. calcSpeed < 35 -> Ignora picchi impossibili (oltre i 35km/h non è corsa)
+    // 3. timeDiff > 0.4 -> Evita aggiornamenti troppo frequenti e rumorosi
+    if (seg >= 0.001 && calcSpeed < 35 && timeDiff > 0.4) {
       session.totalDist += seg;
       if (gpsSpeed&&gpsSpeed>session.maxSpeed) session.maxSpeed=gpsSpeed;
 
@@ -1744,4 +1767,5 @@ window.onload = function() {
 </script>
 <script src="chatbot.js"></script>
 </body>
-</html>
+
+

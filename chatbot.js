@@ -745,11 +745,97 @@
   }
 
   /* ══════════════════════════════════════════════════════
+     DRAGGABLE TOGGLE
+  ══════════════════════════════════════════════════════ */
+  function makeDraggable(el) {
+    let isDragging = false;
+    let moved = false;
+    let startX, startY, initialRight, initialBottom;
+    const dragThreshold = 5;
+    const win = document.getElementById('cb-win');
+
+    // Carica posizione salvata
+    const saved = localStorage.getItem('fitora_cb_pos');
+    if (saved) {
+      const pos = JSON.parse(saved);
+      el.style.right = pos.right;
+      el.style.bottom = pos.bottom;
+      if (win && window.innerWidth > 440) {
+        win.style.right = pos.right;
+        const bVal = parseInt(pos.bottom);
+        if (!isNaN(bVal)) win.style.bottom = (bVal + 72) + 'px';
+      }
+    }
+
+    const onStart = (e) => {
+      isDragging = true;
+      moved = false;
+      const t = e.type === 'touchstart' ? e.touches[0] : e;
+      startX = t.clientX;
+      startY = t.clientY;
+      const rect = el.getBoundingClientRect();
+      initialRight = window.innerWidth - rect.right;
+      initialBottom = window.innerHeight - rect.bottom;
+      el.style.transition = 'none';
+    };
+
+    const onMove = (e) => {
+      if (!isDragging) return;
+      const t = e.type === 'touchmove' ? e.touches[0] : e;
+      const dx = startX - t.clientX;
+      const dy = startY - t.clientY;
+
+      if (!moved && (Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold)) moved = true;
+
+      if (moved) {
+        if (e.cancelable) e.preventDefault();
+        let r = initialRight + dx;
+        let b = initialBottom + dy;
+        const p = 15;
+        r = Math.max(p, Math.min(r, window.innerWidth - el.offsetWidth - p));
+        b = Math.max(p, Math.min(b, window.innerHeight - el.offsetHeight - p));
+        
+        el.style.right = r + 'px';
+        el.style.bottom = b + 'px';
+        if (win && window.innerWidth > 440) {
+          win.style.right = r + 'px';
+          win.style.bottom = (b + 72) + 'px';
+        }
+      }
+    };
+
+    const onEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      el.style.transition = '';
+      if (moved) {
+        localStorage.setItem('fitora_cb_pos', JSON.stringify({ right: el.style.right, bottom: el.style.bottom }));
+      }
+    };
+
+    el.addEventListener('mousedown', onStart);
+    el.addEventListener('touchstart', onStart, { passive: false });
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchend', onEnd);
+
+    // Blocca l'apertura se l'icona è stata trascinata
+    el.addEventListener('click', (e) => {
+      if (moved) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+    }, true);
+  }
+
+  /* ══════════════════════════════════════════════════════
      INIT
   ══════════════════════════════════════════════════════ */
   function init() {
     buildDOM();
     injectExtraStyles();
+    makeDraggable(document.getElementById('cb-toggle'));
     renderChips(CHIPS_DEFAULT);
 
     setTimeout(() => {

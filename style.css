@@ -69,7 +69,7 @@ body::after {
 ============================================= */
 .main-header {
   position: fixed; top: 0; left: 0; width: 100%;
-  z-index: 2000; height: var(--nav-h);
+  z-index: 2100; height: var(--nav-h);
   display: flex; align-items: center;
   padding: 0 clamp(20px, 5vw, 60px);
   background: transparent;
@@ -170,31 +170,62 @@ body::after {
 }
 .nav-cta-btn:hover { filter: brightness(1.1); transform: scale(1.05); }
 
-/* Hamburger */
-.nav-toggle {
-  display: none; background: none; border: none;
-  cursor: pointer; width: 30px; height: 20px;
-  position: relative; z-index: 2100;
+/* --- ANIMAZIONE HAMBURGER TO X --- */
+#navToggle {
+  display: none; /* Nascosto di default su desktop */
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  z-index: 10001; /* Assicurati che sia sopra l'overlay mobile */
+  width: 30px;
+  height: 22px; /* Altezza calcolata per 3 linee da 3px con spaziatura */
+  flex-direction: column;
+  justify-content: space-between;
 }
-.nav-toggle span {
-  display: block; width: 100%; height: 2px;
-  background: #fff; position: absolute; left: 0;
-  transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-}
-.nav-toggle span:nth-child(1) { top: 0; }
-.nav-toggle span:nth-child(2) { top: 50%; transform: translateY(-50%); }
-.nav-toggle span:nth-child(3) { bottom: 0; }
 
-.nav-toggle.active span:nth-child(1) { top: 50%; transform: translateY(-50%) rotate(45deg); }
-.nav-toggle.active span:nth-child(2) { opacity: 0; }
-.nav-toggle.active span:nth-child(3) { bottom: 50%; transform: translateY(50%) rotate(-45deg); }
+#navToggle span {
+  display: block;
+  width: 100%;
+  height: 3px;
+  background-color: #fff; /* Regola il colore in base al tuo tema (es. #00e676) */
+  border-radius: 3px;
+  transition: all 0.4s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  transform-origin: center;
+}
+
+/* Quando il menu è aperto (classe .active aggiunta dallo script) */
+#navToggle.active span:nth-child(1) {
+  /* La linea superiore scende e ruota di 135 gradi */
+  transform: translateY(9.5px) rotate(135deg);
+}
+
+#navToggle.active span:nth-child(2) {
+  /* La linea centrale scompare traslando verso sinistra */
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+#navToggle.active span:nth-child(3) {
+  /* La linea inferiore sale e ruota in senso opposto */
+  transform: translateY(-9.5px) rotate(-135deg);
+}
+
+/* Effetto al passaggio del mouse per renderlo più "vivo" */
+#navToggle:hover span:nth-child(2) {
+  width: 70%;
+}
+#navToggle.active:hover span:nth-child(2) {
+  width: 100%;
+}
 
 /* Mobile Overlay */
 .mobile-overlay {
   position: fixed; inset: 0; background: rgba(8, 8, 8, 0.98);
   z-index: 2050; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  opacity: 0; pointer-events: none;
+  opacity: 0; pointer-events: none; /* Nascosto di default */
   transition: opacity 0.4s; padding: 40px;
 }
 .mobile-overlay.active { opacity: 1; pointer-events: all; }
@@ -238,6 +269,7 @@ body::after {
 @media (max-width: 960px) {
   .nav-menu, .nav-actions { display: none; }
   .nav-toggle { display: block; }
+  #navToggle { display: flex; } /* Mostra l'hamburger su mobile */
 }
 
 /* =============================================

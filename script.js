@@ -8,6 +8,11 @@ window.addEventListener('scroll', () => {
 const navToggle = document.getElementById('navToggle');
 const mobileOverlay = document.getElementById('mobileOverlay');
 
+// Inserisce le 3 linee per l'animazione dell'hamburger
+if (navToggle) {
+  navToggle.innerHTML = '<span></span><span></span><span></span>';
+}
+
 const toggleMenu = () => {
   navToggle.classList.toggle('active');
   mobileOverlay.classList.toggle('active');
