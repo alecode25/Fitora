@@ -785,7 +785,7 @@ body::after {
               </div>
               <div>
                 <div class="hud-val" style="color:var(--yellow)" id="hudPace">—'—"</div>
-                <div class="hud-label">ritmo</div>
+                <div class="hud-label" id="hudPaceLabel">ritmo</div>
               </div>
             </div>
             <div class="controls">
@@ -840,7 +840,7 @@ body::after {
           <div><div class="sum-val" style="color:var(--green)" id="sumCal">—</div><div class="sum-label">kcal</div></div>
           <div><div class="sum-val" style="color:var(--cyan)" id="sumPace">—</div><div class="sum-label">ritmo</div></div>
           <div><div class="sum-val" style="color:var(--orange)" id="sumSpeed">—</div><div class="sum-label">vel. max</div></div>
-          <div><div class="sum-val" style="color:var(--muted)" id="sumPoints">—</div><div class="sum-label">waypoint</div></div>
+          <div><div class="sum-val" style="color:var(--cyan)" id="sumElev">—</div><div class="sum-label">dislivello</div></div>
         </div>
         <button class="save-btn" onclick="saveSession()">💾 Salva in Storico</button>
       </div>
@@ -1024,12 +1024,14 @@ body::after {
 /* ══════════════════════════
    CONSTANTS
 ══════════════════════════ */
-const WEIGHT_KG    = 70;
-const MET_RUNNING  = 8.0;
-const LS_KEY       = 'fitora_session_v3';
-const LS_HIST      = 'fitora_history_v1';
-const LS_MUSIC     = 'fitora_music_id';
-const PACE_SAMPLES = 40;
+const WEIGHT_KG          = 70;
+const MET_RUNNING        = 8.0;
+const LS_KEY             = 'fitora_session_v3';
+const LS_HIST            = 'fitora_history_v1';
+const LS_MUSIC           = 'fitora_music_id';
+const PACE_SAMPLES       = 40;
+const ACCURACY_THRESHOLD = 50;   // m — reject GPS fixes worse than this
+const ROLLING_PACE_WIN   = 30;   // s — rolling window for current pace
 
 /* ══════════════════════════
    STATE
@@ -1041,10 +1043,13 @@ let clockInterval = null;
 let map = null;
 let polyline = null;
 let userMarker = null;
+let accuracyCircle = null;
+let wakeLock = null;
 
 let session = {
   startTime: null, elapsedBefore: 0, pausedAt: null,
-  coords: [], totalDist: 0, maxSpeed: 0, paceHistory: []
+  coords: [], totalDist: 0, maxSpeed: 0, paceHistory: [],
+  elevGain: 0, splits: []
 };
 
 /* ══════════════════════════
@@ -1087,6 +1092,22 @@ function calcCalories(km) {
 function getElapsed() {
   if (!session.startTime) return session.elapsedBefore;
   return session.elapsedBefore + Math.floor((Date.now()-session.startTime)/1000);
+}
+function getRollingPace() {
+  if (session.coords.length<2) return 0;
+  const cutoff = Date.now() - ROLLING_PACE_WIN*1000;
+  const recent = session.coords.filter(c=>c.ts>=cutoff);
+  if (recent.length<2) return 0;
+  let dist=0;
+  for (let i=1;i<recent.length;i++) dist+=haversine(recent[i-1].lat,recent[i-1].lng,recent[i].lat,recent[i].lng);
+  const elapsed=(recent[recent.length-1].ts-recent[0].ts)/1000;
+  return dist>0.01&&elapsed>5 ? elapsed/dist : 0;
+}
+async function requestWakeLock() {
+  try { if ('wakeLock' in navigator) wakeLock=await navigator.wakeLock.request('screen'); } catch(e) {}
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock=null; }
 }
 
 /* ══════════════════════════
@@ -1176,7 +1197,7 @@ function initMap() {
   map = L.map('map',{zoomControl:false,attributionControl:false}).setView([41.9028,12.4964],13);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:.9}).addTo(map);
   polyline = L.polyline([],{color:'#00d4d4',weight:5,opacity:.8}).addTo(map);
-  userMarker = L.circleMarker([0,0],{radius:8,fillColor:'#7fff00',color:'#fff',weight:2,fillOpacity:1}).addTo(map);
+  // marker/circle created on first GPS fix, not here
   setTimeout(() => map.invalidateSize(),500);
 }
 function startGPSWatch() {
@@ -1188,20 +1209,62 @@ function stopGPSWatch() {
   if (watchId!==null) { navigator.geolocation.clearWatch(watchId); watchId=null; }
 }
 function onGPSUpdate(pos) {
-  const {latitude,longitude,accuracy,speed} = pos.coords;
-  document.getElementById('accBadge').textContent = `±${Math.round(accuracy)}m`;
+  const {latitude,longitude,accuracy,speed,altitude,altitudeAccuracy} = pos.coords;
+
+  // Accuracy badge with color coding
+  const accEl = document.getElementById('accBadge');
+  accEl.textContent = `±${Math.round(accuracy)}m`;
+  accEl.style.color = accuracy<10 ? 'var(--green)' : accuracy<20 ? 'var(--yellow)' : accuracy<40 ? 'var(--orange)' : 'var(--red)';
+
   if (appState!=='tracking') return;
-  if (accuracy>50&&session.coords.length===0) { setBanner('active',`🛰️ Segnale debole (±${Math.round(accuracy)}m)…`); return; }
+
+  // Always update marker (even poor accuracy) — circle shows uncertainty
+  if (map) {
+    const ll=[latitude,longitude];
+    if (!userMarker) {
+      accuracyCircle = L.circle(ll,{radius:accuracy,color:'#00d4d4',fillColor:'#00d4d4',fillOpacity:.08,weight:1,interactive:false}).addTo(map);
+      userMarker = L.circleMarker(ll,{radius:8,fillColor:'#7fff00',color:'#fff',weight:2,fillOpacity:1}).addTo(map);
+      document.getElementById('mapIdle').style.display='none';
+    } else {
+      userMarker.setLatLng(ll);
+      if (accuracyCircle) { accuracyCircle.setLatLng(ll); accuracyCircle.setRadius(accuracy); }
+    }
+    map.panTo(ll);
+  }
+
+  // Poor accuracy: update position but skip route/distance recording
+  if (accuracy > ACCURACY_THRESHOLD) {
+    setBanner('active',`🛰️ Segnale debole (±${Math.round(accuracy)}m)…`);
+    return;
+  }
   setBanner('active',`🛰️ GPS attivo · ±${Math.round(accuracy)}m`);
 
   const prev = session.coords[session.coords.length-1];
-  const pt   = {lat:latitude,lng:longitude,ts:pos.timestamp,accuracy,speed:speed?speed*3.6:null};
+  const gpsSpeed = speed ? speed*3.6 : null;
+  const pt = {lat:latitude,lng:longitude,ts:pos.timestamp,accuracy,speed:gpsSpeed,alt:altitude};
 
   if (prev) {
     const seg = haversine(prev.lat,prev.lng,latitude,longitude);
     if (seg>=0.002&&seg<=0.200) {
       session.totalDist += seg;
-      if (pt.speed&&pt.speed>session.maxSpeed) session.maxSpeed=pt.speed;
+      if (gpsSpeed&&gpsSpeed>session.maxSpeed) session.maxSpeed=gpsSpeed;
+
+      // Elevation gain (only when altitudeAccuracy is reasonable)
+      if (altitude!==null&&prev.alt!==null&&(altitudeAccuracy===null||altitudeAccuracy<20)) {
+        const dAlt = altitude - prev.alt;
+        if (dAlt>0.5) session.elevGain += dAlt;
+      }
+
+      // Per-km split notification
+      const prevKm = Math.floor(session.totalDist - seg);
+      const curKm  = Math.floor(session.totalDist);
+      if (curKm>prevKm&&curKm>0) {
+        const el=getElapsed();
+        const splitPace = el/session.totalDist;
+        session.splits.push({km:curKm,elapsed:el,pace:splitPace});
+        showToast(`🏃 ${curKm} km — ${formatPace(splitPace)}/km`);
+      }
+
       const el=getElapsed();
       if (session.totalDist>0&&el>0) {
         session.paceHistory.push({t:el,pace:el/session.totalDist});
@@ -1210,9 +1273,9 @@ function onGPSUpdate(pos) {
       }
     }
   }
+  polyline.addLatLng([latitude,longitude]);
   session.coords.push(pt);
   document.getElementById('pointCount').textContent = session.coords.length+' punti';
-  if (map) { const ll=[latitude,longitude]; polyline.addLatLng(ll); userMarker.setLatLng(ll); map.panTo(ll); }
   updateMetrics();
   saveToStorage();
 }
@@ -1229,29 +1292,29 @@ function onGPSError(err) {
 function handleStart() {
   if (appState==='idle') {
     if (!navigator.geolocation) { showToast('GPS non supportato!'); return; }
-    session = {startTime:Date.now(),elapsedBefore:0,pausedAt:null,coords:[],totalDist:0,maxSpeed:0,paceHistory:[]};
+    session = {startTime:Date.now(),elapsedBefore:0,pausedAt:null,coords:[],totalDist:0,maxSpeed:0,paceHistory:[],elevGain:0,splits:[]};
     appState='tracking';
     localStorage.removeItem(LS_KEY);
-    startGPSWatch(); startTimer(); setUIState('tracking');
+    startGPSWatch(); startTimer(); setUIState('tracking'); requestWakeLock();
     document.getElementById('mapIdle').style.display='none';
     showToast('🏃 Tracking avviato!');
   } else if (appState==='paused') {
     session.startTime=Date.now(); session.pausedAt=null; appState='tracking';
-    startGPSWatch(); startTimer(); setUIState('tracking');
+    startGPSWatch(); startTimer(); setUIState('tracking'); requestWakeLock();
     showToast('▶ Ripreso!');
   }
 }
 function handlePause() {
   if (appState!=='tracking') return;
   session.elapsedBefore=getElapsed(); session.startTime=null;
-  stopGPSWatch(); clearInterval(timerInterval);
+  stopGPSWatch(); clearInterval(timerInterval); releaseWakeLock();
   appState='paused'; setUIState('paused'); saveToStorage();
   showToast('⏸ In pausa');
 }
 function handleStop() {
   if (appState!=='tracking'&&appState!=='paused') return;
   session.elapsedBefore=getElapsed(); session.startTime=null;
-  stopGPSWatch(); clearInterval(timerInterval);
+  stopGPSWatch(); clearInterval(timerInterval); releaseWakeLock();
   appState='done'; setUIState('done'); showSummary();
   if (map&&polyline.getLatLngs().length>0) map.fitBounds(polyline.getBounds(),{padding:[40,40]});
   localStorage.removeItem(LS_KEY);
@@ -1259,7 +1322,9 @@ function handleStop() {
 }
 function handleReset() {
   stopGPSWatch(); clearInterval(timerInterval);
-  session={startTime:null,elapsedBefore:0,pausedAt:null,coords:[],totalDist:0,maxSpeed:0,paceHistory:[]};
+  if (userMarker) { userMarker.remove(); userMarker=null; }
+  if (accuracyCircle) { accuracyCircle.remove(); accuracyCircle=null; }
+  session={startTime:null,elapsedBefore:0,pausedAt:null,coords:[],totalDist:0,maxSpeed:0,paceHistory:[],elevGain:0,splits:[]};
   appState='idle'; setUIState('idle'); resetUI();
   localStorage.removeItem(LS_KEY);
   showToast('🔄 Reset');
@@ -1285,7 +1350,14 @@ function updateMetrics() {
   const dist = session.totalDist;
   const cal  = dist>0 ? calcCalories(dist) : 0;
   const pace = dist>0.05 ? el/dist : 0;
-  const spd  = el>0 ? dist/(el/3600) : 0;
+
+  // Prefer GPS-reported speed; fall back to calculated average
+  const lastCoord = session.coords[session.coords.length-1];
+  const spd = (lastCoord&&lastCoord.speed) ? lastCoord.speed : (el>0 ? dist/(el/3600) : 0);
+
+  // Rolling pace for HUD (last 30s), fall back to session average
+  const rolling = appState==='tracking' ? getRollingPace() : 0;
+  const hudPaceVal = rolling>0 ? rolling : pace;
 
   // Run page
   document.getElementById('totalDist').textContent    = dist.toFixed(2);
@@ -1293,7 +1365,8 @@ function updateMetrics() {
   document.getElementById('avgPace').textContent      = formatPace(pace);
   document.getElementById('currentSpeed').textContent = spd.toFixed(1);
   document.getElementById('hudDist').textContent      = dist.toFixed(2);
-  document.getElementById('hudPace').textContent      = formatPace(pace);
+  document.getElementById('hudPace').textContent      = formatPace(hudPaceVal);
+  document.getElementById('hudPaceLabel').textContent = (rolling>0&&appState==='tracking') ? 'ritmo att.' : 'ritmo medio';
   document.getElementById('lapDist').textContent      = dist.toFixed(2)+' km';
   document.getElementById('lapCal').textContent       = Math.round(cal)+' kcal';
 
@@ -1313,6 +1386,12 @@ function updateMetrics() {
 /* ══════════════════════════
    PACE CHART
 ══════════════════════════ */
+function smoothPaces(arr) {
+  return arr.map((v,i,a)=>{
+    const s=Math.max(0,i-1), e=Math.min(a.length-1,i+1);
+    let sum=0,cnt=0; for(let j=s;j<=e;j++){sum+=a[j];cnt++;} return sum/cnt;
+  });
+}
 function updatePaceChart() {
   const data=session.paceHistory;
   if (data.length<2) return;
@@ -1321,23 +1400,23 @@ function updatePaceChart() {
   canvas.style.display='block';
   const ctx=canvas.getContext('2d');
   canvas.width=canvas.offsetWidth||300; canvas.height=72;
-  const paces=data.map(d=>d.pace);
+  const paces=smoothPaces(data.map(d=>d.pace));
   const minP=Math.min(...paces)*.95, maxP=Math.max(...paces)*1.05;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const ag=ctx.createLinearGradient(0,0,0,canvas.height);
   ag.addColorStop(0,'rgba(0,212,212,.15)'); ag.addColorStop(1,'rgba(0,212,212,0)');
   ctx.beginPath();
-  data.forEach((d,i) => {
-    const x=(i/(data.length-1))*canvas.width;
-    const y=canvas.height-((d.pace-minP)/(maxP-minP))*canvas.height*.85-5;
+  paces.forEach((p,i) => {
+    const x=(i/(paces.length-1))*canvas.width;
+    const y=canvas.height-((p-minP)/(maxP-minP))*canvas.height*.85-5;
     i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
   });
   ctx.lineTo(canvas.width,canvas.height); ctx.lineTo(0,canvas.height); ctx.closePath();
   ctx.fillStyle=ag; ctx.fill();
   ctx.beginPath();
-  data.forEach((d,i) => {
-    const x=(i/(data.length-1))*canvas.width;
-    const y=canvas.height-((d.pace-minP)/(maxP-minP))*canvas.height*.85-5;
+  paces.forEach((p,i) => {
+    const x=(i/(paces.length-1))*canvas.width;
+    const y=canvas.height-((p-minP)/(maxP-minP))*canvas.height*.85-5;
     i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
   });
   ctx.strokeStyle='#00d4d4'; ctx.lineWidth=2; ctx.stroke();
@@ -1356,7 +1435,7 @@ function showSummary() {
   document.getElementById('sumCal').textContent   = Math.round(cal);
   document.getElementById('sumPace').textContent  = formatPace(pace);
   document.getElementById('sumSpeed').textContent = (session.maxSpeed>0?session.maxSpeed:dist/(el/3600)).toFixed(1)+' km/h';
-  document.getElementById('sumPoints').textContent= session.coords.length;
+  document.getElementById('sumElev').textContent  = Math.round(session.elevGain||0)+' m';
   const msgs=['Ottimo lavoro!','Continua così!','Fantastico! 🔥','Sei inarrestabile!'];
   document.getElementById('summarySubtitle').textContent=msgs[Math.floor(Math.random()*msgs.length)];
   document.getElementById('summaryCard').classList.add('show');
@@ -1371,7 +1450,8 @@ function saveSession() {
     date:d.toLocaleDateString('it-IT'),
     day:d.getDate(), mon:d.toLocaleDateString('it-IT',{month:'short'}).toUpperCase(),
     time:d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),
-    dist:+dist.toFixed(2), elapsed:el, cal:Math.round(cal), pace, points:session.coords.length
+    dist:+dist.toFixed(2), elapsed:el, cal:Math.round(cal), pace, points:session.coords.length,
+    elev:Math.round(session.elevGain||0), splits:session.splits||[]
   };
   const hist=getHistory(); hist.unshift(record);
   if (hist.length>50) hist.pop();
@@ -1569,10 +1649,11 @@ function resetUI() {
   document.getElementById('currentSpeed').textContent='0.0';
   document.getElementById('hudDist').textContent='0.00';
   document.getElementById('hudPace').textContent="—'—\"";
+  document.getElementById('hudPaceLabel').textContent='ritmo';
   document.getElementById('lapDist').textContent='0.00 km';
   document.getElementById('lapCal').textContent='0 kcal';
   document.getElementById('pointCount').textContent='0 punti';
-  document.getElementById('accBadge').textContent='— m';
+  const ab=document.getElementById('accBadge'); ab.textContent='— m'; ab.style.color='';
   document.getElementById('mapIdle').style.display='';
   document.getElementById('paceEmpty').style.display='';
   document.getElementById('paceChart').style.display='none';
@@ -1628,7 +1709,9 @@ window.onload = function() {
       session.coords.forEach(p=>polyline.addLatLng([p.lat,p.lng]));
       setTimeout(()=>map.fitBounds(polyline.getBounds()),500);
       const lc=session.coords[session.coords.length-1];
-      userMarker.setLatLng([lc.lat,lc.lng]);
+      const llc=[lc.lat,lc.lng];
+      accuracyCircle = L.circle(llc,{radius:lc.accuracy||20,color:'#00d4d4',fillColor:'#00d4d4',fillOpacity:.08,weight:1,interactive:false}).addTo(map);
+      userMarker = L.circleMarker(llc,{radius:8,fillColor:'#7fff00',color:'#fff',weight:2,fillOpacity:1}).addTo(map);
     }
     document.getElementById('pointCount').textContent=session.coords.length+' punti';
   } else {
@@ -1654,12 +1737,9 @@ window.onload = function() {
 
   loadLastRun();
 
-  if ('wakeLock' in navigator) {
-    document.addEventListener('visibilitychange',async()=>{
-      if (document.visibilityState==='visible'&&appState==='tracking')
-        try { await navigator.wakeLock.request('screen'); } catch(e) {}
-    });
-  }
+  document.addEventListener('visibilitychange',()=>{
+    if (document.visibilityState==='visible'&&appState==='tracking') requestWakeLock();
+  });
 };
 </script>
 <script src="chatbot.js"></script>
