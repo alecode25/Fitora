@@ -1,78 +1,126 @@
 /**
  * ╔══════════════════════════════════════════════════════╗
  * ║  FITORA CHATBOT WIDGET  —  chatbot.js               ║
- * ║  Integrazione: <script src="chatbot.js"></script>   ║
  * ╚══════════════════════════════════════════════════════╝
- *
- * CONFIGURAZIONE (opzionale, prima di questo <script>):
- *
- *   <script>
- *     window.ChatbotConfig = {
- *       siteName:         'Il Mio Sito',
- *       botName:          'Assistente Nome',
- *       apiKey:           'sk-ant-...',    // ⚠ Solo per test – usa proxyUrl in produzione
- *       proxyUrl:         '/api/chat',     // Raccomandato (nasconde la chiave)
- *       systemPrompt:     'Sei l\'assistente di ...',
- *       welcomeMessage:   'Ciao! Come posso aiutarti?',
- *       quickSuggestions: ['Domanda 1', 'Domanda 2'],
- *     };
- *   </script>
  */
 
 (function () {
   'use strict';
 
   /* ══════════════════════════════════════════════════════
-     CONFIG — personalizza qui o tramite window.ChatbotConfig
+     CONFIG
   ══════════════════════════════════════════════════════ */
   const CFG = Object.assign({
-    siteName:         'FITORA',
-    botName:          'Assistente FITORA',
-    botAvatar:        '⚡',
-
-    /* API — imposta UNO dei due: */
-    apiKey:    '',
-    proxyUrl:  '',
-
-    model:     'claude-sonnet-4-6',
-    maxTokens: 512,
-
-    systemPrompt: `Sei l'assistente virtuale di FITORA, un'app fitness potenziata dall'intelligenza artificiale.`,
-
-    welcomeMessage:   'Ciao! 👋 Sono l\'assistente di **FITORA**. Posso aiutarti con domande sull\'app, i piani di allenamento, i nostri Personal Trainer e molto altro. Come posso aiutarti oggi?',
-    quickSuggestions: ['Come funziona?', 'Personal Trainer', 'Dove trovo...', 'PT per allenarsi'],
-
-    cssFile: null,
+    siteName:       'FITORA',
+    botName:        'Assistente FITORA',
+    botAvatar:      '⚡',
+    apiKey:         '',
+    proxyUrl:       '',
+    model:          'claude-sonnet-4-6',
+    maxTokens:      512,
+    welcomeMessage: 'Ciao! 👋 Sono l\'assistente di **FITORA**.\nPosso aiutarti a navigare il sito, conoscerti le funzionalità, metterti in contatto con i Personal Trainer e tanto altro. Come posso aiutarti?',
+    cssFile:        null,
   }, window.ChatbotConfig || {});
 
   /* ══════════════════════════════════════════════════════
-     DATI PERSONAL TRAINER
+     DETECT PAGE  (index.html vs check-in.html/dashboard)
+  ══════════════════════════════════════════════════════ */
+  const IS_DASHBOARD = !!document.getElementById('page-home');
+
+  /* ══════════════════════════════════════════════════════
+     NAVIGAZIONE REALE
+  ══════════════════════════════════════════════════════ */
+  const NAV = IS_DASHBOARD ? {
+    home:        { label: 'Home Dashboard',    icon: '🏠', action: () => switchTabSafe('home') },
+    run:         { label: 'Corri / GPS',       icon: '🏃', action: () => switchTabSafe('run') },
+    allenamento: { label: 'Allenamento Oggi',  icon: '⚡', action: () => goHref('workout.html') },
+    nutrizione:  { label: 'Piano Alimentare',  icon: '🥗', action: () => goHref('nutrition.html') },
+    sport:       { label: 'Il Tuo Sport',      icon: '🏆', action: () => goHref('sport-quiz.html') },
+    storico:     { label: 'Storico Corse',     icon: '📜', action: () => switchTabSafe('history') },
+    musica:      { label: 'Musica / Spotify',  icon: '🎵', action: () => switchTabSafe('music') },
+    community:   { label: 'Community',         icon: '👥', action: () => switchTabSafe('community') },
+    match:       { label: 'Trova Compagno',    icon: '💚', action: () => goHref('match.html') },
+  } : {
+    home:        { label: 'Home',              icon: '🏠', action: () => goHref('index.html#hero') },
+    metodo:      { label: 'Il Metodo',         icon: '📋', action: () => goHref('index.html#beyond') },
+    features:    { label: 'Funzionalità',      icon: '⚡', action: () => goHref('index.html#features') },
+    tech:        { label: 'Tecnologia AI',     icon: '🤖', action: () => goHref('index.html#vision') },
+    community:   { label: 'Community',         icon: '👥', action: () => goHref('index.html#community') },
+    futuro:      { label: 'Futuro / Wearable', icon: '🚀', action: () => goHref('index.html#future') },
+    dashboard:   { label: 'Dashboard ⚡',      icon: '📊', action: () => goHref('check-in.html') },
+    registrati:  { label: 'Registrati',        icon: '✍️', action: () => goHref('register.html') },
+    allenamento: { label: 'Allenamento',       icon: '⚡', action: () => goHref('workout.html') },
+    nutrizione:  { label: 'Nutrizione',        icon: '🥗', action: () => goHref('nutrition.html') },
+    sport:       { label: 'Quiz Sport',        icon: '🏆', action: () => goHref('sport-quiz.html') },
+  };
+
+  function goHref(url) { window.location.href = url; }
+  function switchTabSafe(tab) {
+    if (typeof window.switchTab === 'function') window.switchTab(tab);
+  }
+
+  /* ══════════════════════════════════════════════════════
+     PERSONAL TRAINER
   ══════════════════════════════════════════════════════ */
   const PT_DATA = [
     {
-      name:       'Marco Ferretti',
-      role:       'Strength & Conditioning',
-      emoji:      '💪',
-      // Sostituisci con URL reale dell'immagine
-      photo:      'https://i.pravatar.cc/80?img=11',
-      phone:      '3901234567',
-      bio:        'Specializzato in forza funzionale e bodybuilding. 8 anni di esperienza, certificato CSEN.',
-      tags:       ['Forza', 'Ipertrofia', 'Postura'],
+      name:  'Marco Ferretti',
+      role:  'Strength & Conditioning',
+      photo: 'https://i.pravatar.cc/80?img=11',
+      phone: '3901234567',
+      bio:   'Specializzato in forza funzionale e bodybuilding. 8 anni di esperienza, certificato CSEN.',
+      tags:  ['Forza', 'Ipertrofia', 'Postura', 'Funzionale'],
     },
     {
-      name:       'Laura Conti',
-      role:       'Cardio & Wellness',
-      emoji:      '🏃‍♀️',
-      // Sostituisci con URL reale dell'immagine
-      photo:      'https://i.pravatar.cc/80?img=47',
-      phone:      '3917654321',
-      bio:        'Coach di running, yoga e nutrizione sportiva. 6 anni di esperienza, laurea in Scienze Motorie.',
-      tags:       ['Cardio', 'Yoga', 'Dimagrimento'],
+      name:  'Laura Conti',
+      role:  'Cardio & Wellness Coach',
+      photo: 'https://i.pravatar.cc/80?img=47',
+      phone: '3917654321',
+      bio:   'Coach di running, yoga e nutrizione sportiva. 6 anni di esperienza, laureata in Scienze Motorie.',
+      tags:  ['Cardio', 'Yoga', 'Dimagrimento', 'Running'],
+    },
+    {
+      name:  'Alessio Vitali',
+      role:  'Crossfit & Functional Trainer',
+      photo: 'https://i.pravatar.cc/80?img=12',
+      phone: '3928889990',
+      bio:   'Esperto in allenamenti ad alta intensità e preparazione atletica. 5 anni di gare Crossfit.',
+      tags:  ['Crossfit', 'HIIT', 'Resistenza', 'Mobilità'],
     },
   ];
 
   /* ══════════════════════════════════════════════════════
-     INJECT CSS automaticamente
+     CHIP SETS
+  ══════════════════════════════════════════════════════ */
+  const CHIPS_DEFAULT = [
+    'Come funziona FITORA?',
+    'PT per allenarsi',
+    'Dove trovo le funzioni?',
+    'Cos\'è la Computer Vision?',
+    'Community e sfide',
+    'Allenamento con l\'AI',
+  ];
+  const CHIPS_AFTER_NAV = [
+    'PT per allenarsi',
+    'Come funziona il GPS?',
+    'Nutrizione intelligente',
+    'Community e sfide',
+  ];
+  const CHIPS_AFTER_PT = [
+    'Come funziona FITORA?',
+    'Dove trovo gli allenamenti?',
+    'Cos\'è la Computer Vision?',
+    'Community e sfide',
+  ];
+  const CHIPS_AFTER_FEATURES = [
+    'PT per allenarsi',
+    'Mostrami le sezioni del sito',
+    'Come mi registro?',
+    'Community e sfide',
+  ];
+
+  /* ══════════════════════════════════════════════════════
+     INJECT CSS
   ══════════════════════════════════════════════════════ */
   (function injectCSS() {
     if (document.getElementById('cb-styles')) return;
@@ -80,9 +128,7 @@
     const base   = script ? script.src.replace(/chatbot\.js[^/]*$/, '') : '';
     const href   = CFG.cssFile || (base + 'chatbot.css');
     const link   = document.createElement('link');
-    link.id      = 'cb-styles';
-    link.rel     = 'stylesheet';
-    link.href    = href;
+    link.id = 'cb-styles'; link.rel = 'stylesheet'; link.href = href;
     document.head.appendChild(link);
   })();
 
@@ -92,7 +138,8 @@
   let isOpen  = false;
   let isBusy  = false;
   let history = [];
-
+  let bmiState = { step: 0, weight: 0, height: 0 }; // Stato per il calcolatore BMI
+  let chipSet = CHIPS_DEFAULT;
 
   /* ══════════════════════════════════════════════════════
      UTILS
@@ -103,30 +150,24 @@
     if (html !== undefined) e.innerHTML = html;
     return e;
   }
-
   function md(text) {
     return text
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g,     '<em>$1</em>')
-      .replace(/`([^`]+)`/g,     '<code>$1</code>')
-      .replace(/\n/g, '<br>');
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g,'<em>$1</em>')
+      .replace(/`([^`]+)`/g,'<code>$1</code>')
+      .replace(/\n/g,'<br>');
   }
-
-  function autoResize(textarea) {
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 96) + 'px';
+  function autoResize(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 96) + 'px';
   }
-
-  function escapeHTML(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  function escHTML(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
-
   function waLink(phone) {
-    const num = phone.replace(/\D/g, '');
-    return `https://wa.me/39${num}`;
+    return `https://wa.me/39${phone.replace(/\D/g,'')}`;
   }
-
 
   /* ══════════════════════════════════════════════════════
      BUILD DOM
@@ -155,10 +196,17 @@
         <div class="cb-avatar">${CFG.botAvatar}</div>
         <div class="cb-header-info">
           <div class="cb-header-name">${CFG.botName}</div>
-          <div class="cb-header-status">
-            <span class="cb-dot"></span>Online ora
-          </div>
+          <div class="cb-header-status"><span class="cb-dot"></span>Online ora</div>
         </div>
+        <button class="cb-reset" id="cb-reset" title="Pulisci chat">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" 
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </button>
         <button class="cb-close" id="cb-close" aria-label="Chiudi">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -168,16 +216,12 @@
         </button>
       </div>
       <div class="cb-msgs" id="cb-msgs"></div>
-      <div class="cb-bottom">
+      <div class="cb-bottom" aria-live="polite" aria-atomic="false">
         <div class="cb-chips" id="cb-chips"></div>
         <div class="cb-input-row">
-          <textarea
-            class="cb-input" id="cb-input"
-            placeholder="Scrivi un messaggio…"
-            rows="1"
-            aria-label="Messaggio"
-          ></textarea>
-          <button class="cb-send" id="cb-send" aria-label="Invia messaggio">
+          <textarea class="cb-input" id="cb-input"
+            placeholder="Scrivi un messaggio…" rows="1" aria-label="Messaggio"></textarea>
+          <button class="cb-send" id="cb-send" aria-label="Invia">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
             </svg>
@@ -190,22 +234,26 @@
     document.body.appendChild(win);
   }
 
-
   /* ══════════════════════════════════════════════════════
-     CHIPS / SUGGERIMENTI RAPIDI
+     CHIPS
   ══════════════════════════════════════════════════════ */
-  function renderChips() {
+  function renderChips(set) {
     const container = document.getElementById('cb-chips');
     if (!container) return;
     container.innerHTML = '';
-    if (history.length > 0) return;
-    CFG.quickSuggestions.forEach(text => {
-      const chip = el('button', { className: 'cb-chip' }, escapeHTML(text));
-      chip.addEventListener('click', () => send(text));
+    (set || chipSet).forEach(text => {
+      const chip = el('button', { className: 'cb-chip' }, escHTML(text));
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation(); // Evita che il click chiuda la finestra
+        send(text);
+      });
       container.appendChild(chip);
     });
   }
-
+  function updateChips(set) {
+    chipSet = set || CHIPS_DEFAULT;
+    renderChips(chipSet);
+  }
 
   /* ══════════════════════════════════════════════════════
      MESSAGGI
@@ -215,33 +263,50 @@
     if (!msgs) return;
     const row = el('div', { className: `cb-msg cb-msg-${role}` });
     if (role === 'bot') {
-      const bubbleClass = 'cb-bubble cb-bubble-bot' + (isError ? ' cb-err-bubble' : '');
-      row.innerHTML = `
-        <div class="cb-msg-av">${CFG.botAvatar}</div>
-        <div class="${bubbleClass}">${md(text)}</div>
-      `;
+      const cls = 'cb-bubble cb-bubble-bot' + (isError ? ' cb-err-bubble' : '');
+      row.innerHTML = `<div class="cb-msg-av">${CFG.botAvatar}</div><div class="${cls}">${md(text)}</div>`;
     } else {
       row.innerHTML = `<div class="cb-bubble cb-bubble-user">${md(text)}</div>`;
     }
     msgs.appendChild(row);
     scrollBottom();
-    renderChips();
+    saveChat();
   }
-
-  /** Inserisce un messaggio con HTML personalizzato (card PT, mappa sezioni, ecc.) */
-  function addRichMsg(htmlContent) {
+  function saveChat() {
+    // Filtra i messaggi ricchi per salvare il loro contenuto HTML
+    const serializableHistory = history.map(m => {
+      if (m.type === 'rich') {
+        return { role: m.role, content: m.content, type: m.type, nextChips: m.nextChips };
+      }
+      return { role: m.role, content: m.content };
+    });
+    localStorage.setItem('fitora_chat_history', JSON.stringify(serializableHistory));
+  }
+  function loadChat() {
+    const saved = localStorage.getItem('fitora_chat_history');
+    if (saved) {
+      history = JSON.parse(saved);
+      history.forEach(m => {
+        if (m.type === 'rich') {
+          addRichMsg(m.content, m.nextChips); // Re-render rich message
+          setTimeout(bindNavClicks, 50); // Re-bind clicks for nav cards
+        } else {
+          addMsg(m.role, m.content);
+        }
+      });
+      scrollBottom();
+    }
+  }
+  function addRichMsg(html, nextChips) {
     const msgs = document.getElementById('cb-msgs');
     if (!msgs) return;
     const row = el('div', { className: 'cb-msg cb-msg-bot' });
-    row.innerHTML = `
-      <div class="cb-msg-av">${CFG.botAvatar}</div>
-      <div class="cb-bubble cb-bubble-bot cb-rich">${htmlContent}</div>
-    `;
+    row.innerHTML = `<div class="cb-msg-av">${CFG.botAvatar}</div><div class="cb-bubble cb-bubble-bot cb-rich">${html}</div>`;
     msgs.appendChild(row);
     scrollBottom();
-    renderChips();
+    if (nextChips) updateChips(nextChips);
+    saveChat();
   }
-
   function showTyping() {
     const msgs = document.getElementById('cb-msgs');
     if (!msgs || document.getElementById('cb-typing')) return;
@@ -254,85 +319,80 @@
     msgs.appendChild(row);
     scrollBottom();
   }
-
-  function removeTyping() {
-    document.getElementById('cb-typing')?.remove();
-  }
-
+  function removeTyping() { document.getElementById('cb-typing')?.remove(); }
   function scrollBottom() {
     const msgs = document.getElementById('cb-msgs');
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
   }
 
-
   /* ══════════════════════════════════════════════════════
-     CARD PERSONAL TRAINER
+     PT CARDS
   ══════════════════════════════════════════════════════ */
   function buildPTCards() {
     const cards = PT_DATA.map(pt => `
       <div class="cb-pt-card">
-        <img class="cb-pt-photo" src="${pt.photo}" alt="Foto ${escapeHTML(pt.name)}" onerror="this.style.display='none'">
+        <img class="cb-pt-photo" src="${pt.photo}" alt="${escHTML(pt.name)}"
+             onerror="this.style.display='none'">
         <div class="cb-pt-info">
-          <div class="cb-pt-name">${escapeHTML(pt.name)}</div>
-          <div class="cb-pt-role">${escapeHTML(pt.role)}</div>
-          <div class="cb-pt-bio">${escapeHTML(pt.bio)}</div>
-          <div class="cb-pt-tags">${pt.tags.map(t=>`<span class="cb-pt-tag">${escapeHTML(t)}</span>`).join('')}</div>
+          <div class="cb-pt-name">${escHTML(pt.name)}</div>
+          <div class="cb-pt-role">${escHTML(pt.role)}</div>
+          <div class="cb-pt-bio">${escHTML(pt.bio)}</div>
+          <div class="cb-pt-tags">
+            ${pt.tags.map(t=>`<span class="cb-pt-tag">${escHTML(t)}</span>`).join('')}
+          </div>
           <a class="cb-pt-wa" href="${waLink(pt.phone)}" target="_blank" rel="noopener">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
               <path d="M12 0C5.373 0 0 5.373 0 12c0 2.143.564 4.148 1.546 5.877L0 24l6.293-1.526A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.87 9.87 0 0 1-5.042-1.382l-.361-.214-3.741.981.999-3.648-.235-.374A9.87 9.87 0 0 1 2.118 12C2.118 6.539 6.539 2.118 12 2.118S21.882 6.539 21.882 12 17.461 21.882 12 21.882z"/>
             </svg>
-            Scrivi a ${escapeHTML(pt.name.split(' ')[0])} su WhatsApp
+            Scrivi a ${escHTML(pt.name.split(' ')[0])} su WhatsApp
           </a>
         </div>
       </div>
     `).join('');
-    return `<div class="cb-pt-intro">👥 Ecco i nostri <strong>Personal Trainer</strong> disponibili in palestra:</div>${cards}`;
+    return `<div class="cb-pt-intro">👥 I nostri <strong>Personal Trainer</strong> in palestra:</div>${cards}`;
   }
 
-
   /* ══════════════════════════════════════════════════════
-     MAPPA SEZIONI SITO
+     NAV CARDS  — pulsanti che navigano davvero
   ══════════════════════════════════════════════════════ */
-  function buildSiteMap(section) {
-    const sections = {
-      home:          { icon: '🏠', label: 'Home',           url: '/',                desc: 'Pagina principale con panoramica di FITORA' },
-      allenamenti:   { icon: '🏋️', label: 'Allenamenti',   url: '/allenamenti',     desc: 'Libreria esercizi e piani personalizzati' },
-      nutrizione:    { icon: '🥗', label: 'Nutrizione',     url: '/nutrizione',      desc: 'Piani alimentari e calcolo calorie' },
-      progress:      { icon: '📈', label: 'Progressi',      url: '/progressi',       desc: 'Dashboard per monitorare i tuoi risultati' },
-      community:     { icon: '👥', label: 'Community',      url: '/community',       desc: 'Sfide, amici e classifiche' },
-      profilo:       { icon: '👤', label: 'Profilo',        url: '/profilo',         desc: 'Gestione account e impostazioni' },
-      registrazione: { icon: '✍️', label: 'Registrati',    url: '/registrati',      desc: 'Crea il tuo account FITORA gratuitamente' },
-      contatti:      { icon: '📞', label: 'Contatti',       url: '/contatti',        desc: 'Supporto e assistenza clienti' },
-      pt:            { icon: '🏃', label: 'Personal Trainer', url: '/personal-trainer', desc: 'Trova il tuo coach in palestra' },
-    };
-
-    // Se richiesta sezione specifica, mostra solo quella
-    if (section && sections[section]) {
-      const s = sections[section];
-      return `${s.icon} Puoi trovare <strong>${s.label}</strong> qui: <a class="cb-link" href="${s.url}" target="_blank">${s.url}</a><br><small style="color:#888">${s.desc}</small>`;
-    }
-
-    // Altrimenti mostra tutte
-    const items = Object.values(sections).map(s =>
-      `<a class="cb-section-item" href="${s.url}" target="_blank">
-        <span class="cb-section-icon">${s.icon}</span>
-        <span>
-          <strong>${s.label}</strong>
-          <small>${s.desc}</small>
-        </span>
-      </a>`
-    ).join('');
-    return `<div style="margin-bottom:8px">📍 Ecco dove trovare tutto su FITORA:</div><div class="cb-sections">${items}</div>`;
+  function buildNavCards(keys) {
+    const items = (keys || Object.keys(NAV)).map(k => {
+      const n = NAV[k];
+      if (!n) return '';
+      return `<button class="cb-nav-item" data-nav="${k}">
+        <span class="cb-nav-icon">${n.icon}</span>
+        <span class="cb-nav-label">${escHTML(n.label)}</span>
+        <span class="cb-nav-arrow">→</span>
+      </button>`;
+    }).join('');
+    return `<div class="cb-nav-intro">📍 Dove vuoi andare? Clicca per aprire:</div><div class="cb-nav-grid">${items}</div>`;
   }
 
+  function bindNavClicks() {
+    document.querySelectorAll('.cb-nav-item[data-nav]:not([data-bound])').forEach(btn => {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        const n = NAV[btn.dataset.nav];
+        if (n && n.action) { closeChat(); setTimeout(() => n.action(), 200); }
+      });
+    });
+  }
 
   /* ══════════════════════════════════════════════════════
-     INVIA MESSAGGIO
+     HELPER
+  ══════════════════════════════════════════════════════ */
+  function rich(html, nextChips) { return { __rich: true, html, nextChips }; }
+
+  /* ══════════════════════════════════════════════════════
+     SEND
   ══════════════════════════════════════════════════════ */
   async function send(text) {
     text = text.trim();
     if (!text || isBusy) return;
+
+    const chipsEl = document.getElementById('cb-chips');
+    if (chipsEl) chipsEl.innerHTML = '';
 
     addMsg('user', text);
     history.push({ role: 'user', content: text });
@@ -344,158 +404,263 @@
     showTyping();
 
     try {
-      const result = await generateInternalResponse(text);
+      const result = await generateResponse(text);
       removeTyping();
-      history.push({ role: 'assistant', content: typeof result === 'string' ? result : '[rich]' });
-      if (result && result.__rich) {
-        addRichMsg(result.html);
+      if (result && result.__rich) { // Handle rich messages
+        history.push({ role: 'assistant', content: result.html, type: 'rich', nextChips: result.nextChips });
+        addRichMsg(result.html, result.nextChips);
+        setTimeout(bindNavClicks, 50);
       } else {
+        history.push({ role: 'assistant', content: result });
         addMsg('bot', result);
+        // updateChips(chipSet); // Chips are updated by addRichMsg or generateResponse
+        updateChips(chipSet);
       }
     } catch (err) {
       removeTyping();
       addMsg('bot', '⚠️ Si è verificato un errore. Riprova tra poco.', true);
       console.error('[FITORA Chatbot]', err);
+      updateChips(chipSet);
     } finally {
-      setBusy(false);
+      // A small delay to ensure UI updates properly, especially if there are rapid DOM changes.
+      // This helps prevent the input from getting stuck in a disabled state.
+      setTimeout(() => setBusy(false), 50);
     }
   }
 
   function setBusy(busy) {
     isBusy = busy;
-    const sendBtn = document.getElementById('cb-send');
-    const inp     = document.getElementById('cb-input');
-    if (sendBtn) sendBtn.disabled = busy;
-    if (inp)     inp.disabled     = busy;
+    const sb = document.getElementById('cb-send');
+    const inp = document.getElementById('cb-input');
+    if (sb) sb.disabled = busy;
+    if (inp) inp.disabled = busy;
   }
 
-  function rich(html) { return { __rich: true, html }; }
-
-
   /* ══════════════════════════════════════════════════════
-     LOGICA CHATBOT
+     LOGICA RISPOSTE
   ══════════════════════════════════════════════════════ */
-  async function generateInternalResponse(userMessage) {
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 700 + 350));
+  async function generateResponse(userMessage) {
+    await new Promise(r => setTimeout(r, Math.random() * 600 + 300));
     const msg = userMessage.toLowerCase();
 
-    /* ── Saluti ── */
-    if (/\b(ciao|salve|hey|buongiorno|buonasera)\b/.test(msg)) {
-      return 'Ciao! 👋 Sono l\'assistente di FITORA. Puoi chiedermi come funziona l\'app, dove trovare le varie sezioni del sito, conoscere i nostri Personal Trainer e molto altro!';
+    /* ── Logica BMI Flow ── */
+    if (bmiState.step === 1) {
+      const w = parseFloat(msg);
+      if (isNaN(w) || w < 30 || w > 250) return "Per favore, inserisci un peso valido in kg (es: 75).";
+      bmiState.weight = w;
+      bmiState.step = 2;
+      return "Ottimo. Ora inserisci la tua **altezza in cm** (es: 180):";
     }
+    if (bmiState.step === 2) {
+      const h = parseFloat(msg) / 100;
+      if (isNaN(h) || h < 1 || h > 2.5) return "Per favore, inserisci un'altezza valida in cm (es: 175).";
+      const bmi = (bmiState.weight / (h * h)).toFixed(1);
+      bmiState.step = 0;
+      let desc = bmi < 18.5 ? "Sottopeso" : bmi < 25 ? "Normopeso" : bmi < 30 ? "Sovrappeso" : "Obesità";
+      return `Il tuo BMI calcolato è **${bmi}** (${desc}).\n\nRicorda che questo è un valore indicativo. Per un'analisi completa, consulta i nostri PT o la sezione Nutrizione! 💪`;
+    }
+    if (/calcola.*bmi|indice.*massa|voglio sapere il mio bmi/.test(msg)) {
+      bmiState.step = 1;
+      return "Certamente! Aiutami con il calcolo. Qual è il tuo **peso attuale in kg**?";
+    }
+
+    /* ── Saluti ── */
+    if (/\b(ciao|salve|hey|buongiorno|buonasera|buonanotte|hello)\b/.test(msg)) {
+      updateChips(CHIPS_DEFAULT);
+      const hasChattedBefore = localStorage.getItem('fitora_has_chatted');
+      if (hasChattedBefore) {
+        return 'Bentornato! 👋 Sono di nuovo qui per aiutarti con **FITORA**. Come posso esserti utile oggi?';
+      } else {
+        localStorage.setItem('fitora_has_chatted', 'true');
+        return 'Ciao! 👋 Sono l\'assistente di **FITORA**.\n\nPosso aiutarti su: funzionalità dell\'app, navigare il sito, Personal Trainer disponibili e tanto altro. Da dove vuoi iniziare?';
+      }
+    }
+
+    /* ── Contatti / Supporto ── */
+    if (/contatti|supporto|aiuto|email|telefono|assistenza/.test(msg)) {
+      updateChips(CHIPS_DEFAULT);
+      return 'Certo! Puoi contattarci via email a **supporto@fitora.com** o visitare la nostra pagina di **Contatti** sul sito. Siamo qui per aiutarti! 📧';
+    }
+
 
     /* ── Chi sei ── */
-    if (/chi sei|cosa fai|come ti chiami/.test(msg)) {
-      return 'Sono l\'assistente virtuale di **FITORA** 🤖 Posso aiutarti a navigare il sito, rispondere a domande sull\'app, metterti in contatto con i Personal Trainer e supportarti nel tuo percorso fitness!';
+    if (/chi sei|cosa fai|presentati|come ti chiami/.test(msg)) {
+      updateChips(CHIPS_DEFAULT);
+      return 'Sono l\'assistente virtuale di **FITORA** 🤖\n\nPosso:\n- Rispondere alle domande sull\'app e le funzionalità\n- Portarti direttamente alle sezioni del sito\n- Presentarti i nostri **Personal Trainer**\n- Supportarti nel tuo percorso fitness\n\nChiedimi pure qualsiasi cosa!';
     }
 
-    /* ══════════════════════════
-       PERSONAL TRAINER
-    ══════════════════════════ */
-    if (/personal trainer|pt\b|coach|allenatore|preparatore|palestra|trainer/.test(msg)) {
-      return rich(buildPTCards());
+    /* ══ PERSONAL TRAINER - Come allenarsi con un PT ══ */
+    if (/pt per allenarsi|come allenarsi con un personal trainer|allenamento con pt|voglio un pt/.test(msg)) {
+      updateChips(CHIPS_AFTER_PT);
+      return 'Allenarsi con un **Personal Trainer** di FITORA significa avere un esperto al tuo fianco per:\n\n- **Piani personalizzati**: Schede su misura per i tuoi obiettivi e condizioni fisiche.\n- **Correzione tecnica**: Feedback in tempo reale per massimizzare i risultati e prevenire infortuni.\n- **Motivazione costante**: Supporto e incoraggiamento per superare i tuoi limiti.\n- **Monitoraggio avanzato**: Analisi dettagliata dei progressi e aggiustamenti del programma.\n\nI nostri PT sono specializzati in diverse discipline. Vuoi conoscerli?';
     }
 
-    /* ══════════════════════════
-       NAVIGAZIONE SITO
-    ══════════════════════════ */
-    if (/dove trovo|dove si trova|dove posso trovare|come arrivo a|come vado su|pagina|sezione/.test(msg)) {
-      // Sezioni specifiche
-      if (/allename|workout|eserciz/.test(msg))          return rich(buildSiteMap('allenamenti'));
-      if (/nutrizi|diet|calorie|aliment/.test(msg))      return rich(buildSiteMap('nutrizione'));
-      if (/progress|risultat|statistic/.test(msg))       return rich(buildSiteMap('progress'));
-      if (/community|amici|sfid|classifica/.test(msg))   return rich(buildSiteMap('community'));
-      if (/profil|account|impostazion/.test(msg))        return rich(buildSiteMap('profilo'));
-      if (/registr|iscri|sign up|sign-up/.test(msg))     return rich(buildSiteMap('registrazione'));
-      if (/contat|support|aiuto|assistenz/.test(msg))    return rich(buildSiteMap('contatti'));
-      if (/home|inizio|principale/.test(msg))            return rich(buildSiteMap('home'));
-      // Mappa completa
-      return rich(buildSiteMap());
+    /* ══ PERSONAL TRAINER - Mostra PT disponibili ══ */
+    if (/personal trainer|pt\b|\bcoach\b|allenatore|preparatore|conoscerli/.test(msg)) {
+      return rich(buildPTCards(), CHIPS_AFTER_PT);
     }
 
-    /* ── Mappa completa esplicita ── */
-    if (/mappa|tutte le pagine|tutto il sito|menu|nav/.test(msg)) {
-      return rich(buildSiteMap());
+    /* ══ NAVIGAZIONE — tutte le sezioni ══ */
+    if (/dove trovo|dove si trova|dove posso|come arrivo|come vado|tutte le sezioni|mappa del sito|mostrami.*sezion|sezioni del sito|cosa c'è nel sito/.test(msg)) {
+      return rich(buildNavCards(), CHIPS_AFTER_NAV);
     }
 
-    /* ══════════════════════════
-       FUNZIONALITÀ FITORA
-    ══════════════════════════ */
-    if (/come funziona|funzionalit|cosa offre|cosa fa fitora/.test(msg)) {
-      return 'FITORA è un\'app fitness all-in-one: crea **piani di allenamento personalizzati** tramite AI, corregge la **postura in tempo reale** con Computer Vision, gestisce la **nutrizione** e ti connette con la **community**. Tutto adattato ai tuoi obiettivi e al tuo stato fisico giornaliero.';
+    /* Sezioni specifiche */
+    if (/\b(dashboard|check.?in|pannello|home)\b/.test(msg) && /dove|trovo|apri|vai|portami/.test(msg)) {
+      return rich(buildNavCards(IS_DASHBOARD ? ['home','allenamento','nutrizione','sport'] : ['dashboard','features','metodo']), CHIPS_AFTER_NAV);
+    }
+    if (/\b(workout|allenament|eserciz|scheda)\b/.test(msg) && /dove|trovo|apri|vai|portami/.test(msg)) {
+      return rich(buildNavCards(['allenamento','sport', IS_DASHBOARD?'run':'tech']), CHIPS_AFTER_NAV);
+    }
+    if (/\b(nutrizi|dieta|calorie|alimentaz|pasto|cibo)\b/.test(msg) && /dove|trovo|apri|vai|portami/.test(msg)) {
+      return rich(buildNavCards(['nutrizione', IS_DASHBOARD?'home':'dashboard']), CHIPS_AFTER_NAV);
+    }
+    if (/\b(community|amici|sfid|classifica|badge)\b/.test(msg) && /dove|trovo|apri|vai|portami/.test(msg)) {
+      return rich(buildNavCards(['community', IS_DASHBOARD?'match':'futuro']), CHIPS_AFTER_NAV);
+    }
+    if (/\b(storico|storia|corse passate)\b/.test(msg)) {
+      return rich(buildNavCards(IS_DASHBOARD ? ['storico','run','home'] : ['dashboard']), CHIPS_AFTER_NAV);
+    }
+    if (/\b(musica|spotify|playlist)\b/.test(msg) && /dove|trovo|apri|vai|portami/.test(msg)) {
+      return rich(buildNavCards(IS_DASHBOARD ? ['musica','run'] : ['dashboard']), CHIPS_AFTER_NAV);
+    }
+    if (/\b(gps|corri|corsa|percorso)\b/.test(msg) && /dove|trovo|apri|vai|portami/.test(msg)) {
+      return rich(buildNavCards(IS_DASHBOARD ? ['run','storico'] : ['dashboard','tech']), CHIPS_AFTER_NAV);
+    }
+    if (/registr|iscri|sign.?up/.test(msg) && /dove|trovo|apri|vai|portami/.test(msg)) {
+      return rich(buildNavCards(['registrati', IS_DASHBOARD?'home':'dashboard']), CHIPS_AFTER_NAV);
     }
 
-    if (/allename|workout|eserciz|scheda/.test(msg)) {
-      return 'I piani di allenamento di FITORA sono generati dall\'AI in base ai tuoi parametri fisici, obiettivi e disponibilità. Si adattano automaticamente giorno per giorno, correggendo anche la postura tramite la fotocamera 📱\n\nVuoi che ti mostri dove trovare gli allenamenti sul sito?';
+    /* ══ FUNZIONALITÀ ══ */
+
+    /* Come funziona */
+    if (/come funziona|funzionalit|cosa offre|cosa fa fitora|spiegami|dimmi di fitora/.test(msg)) {
+      updateChips(CHIPS_AFTER_FEATURES);
+      return 'FITORA è un\'app fitness all-in-one basata su **AI** 🤖\n\n**01 Lo Sport Perfetto** — Analizza i tuoi dati clinici e suggerisce lo sport ideale per te.\n\n**02 Personal Trainer AI** — Corregge postura, conta reps, previene infortuni — solo col tuo telefono.\n\n**03 Computer Vision** — La fotocamera analizza i tuoi movimenti in tempo reale.\n\n**04 Adattabilità Quotidiana** — Il piano cambia ogni giorno in base al tuo umore e stanchezza.\n\n**05 Nutrizione Intelligente** — Piano alimentare su misura basato sui parametri reali.\n\n**06 Community & Gamification** — Sfide, badge, compagni di allenamento.\n\nVuoi sapere di più su una funzione specifica?';
     }
 
-    if (/nutrizi|calorie|macros|dieta|alimentaz|cibo|mangio/.test(msg)) {
-      return 'Il modulo nutrizione di FITORA calcola il tuo **fabbisogno calorico** e la suddivisione in macronutrienti (proteine, carboidrati, grassi) in base ai tuoi obiettivi. Puoi loggare i pasti, scansionare i codici a barre e ricevere suggerimenti personalizzati 🥗';
+    /* Computer Vision */
+    if (/computer vision|telecamera|fotocamera|postura|ripetizioni|\brep\b|movimento.*reale|reale.*movimento/.test(msg)) {
+      updateChips(CHIPS_AFTER_FEATURES);
+      return '**Computer Vision di FITORA** 📷\n\nUsa la fotocamera del tuo smartphone per:\n\n- **Analizzare i movimenti** in tempo reale\n- **Correggere la postura** con feedback visivo immediato\n- **Contare le ripetizioni** automaticamente\n- **Rilevare rischi di infortuni** *prima* che accadano\n\nNon servono sensori o device aggiuntivi — basta il tuo telefono appoggiato davanti a te 📱\n\nVuoi che ti porti nella sezione Tech del sito?';
     }
 
-    if (/computer vision|telecamera|fotocamera|postura|ripetizioni|rep\b/.test(msg)) {
-      return 'La funzione **Computer Vision** usa la fotocamera del tuo smartphone per analizzare i movimenti in tempo reale: corregge la postura, conta le ripetizioni automaticamente e ti avvisa se rischi un infortunio 🎯 È sufficiente posizionare il telefono di fronte a te durante l\'allenamento.';
+    /* GPS / Corsa */
+    if (/\bgps\b|traccia.*corsa|percorso gps|correre|running|km.*corsa|distanza.*corsa/.test(msg)) {
+      updateChips(['Dove trovo la sezione Corri?', 'Storico corse', 'Cos\'è la Computer Vision?', 'Personal Trainer 💪']);
+      return '**Tracking GPS di FITORA** 🛰️\n\nDalla sezione **Corri** puoi:\n\n- Tracciare il percorso in **tempo reale** su mappa interattiva\n- Vedere distanza, velocità, calorie e ritmo (min/km)\n- Visualizzare il **grafico del ritmo** nel tempo\n- Salvare la sessione nello **Storico Corse**\n- Mettere in pausa e riprendere la sessione\n\nIl GPS si attiva quando premi *Avvia*. Basta permettere l\'accesso alla posizione 📍\n\nVuoi aprire la schermata Corri?';
     }
 
-    if (/community|amici|sfid|classifica|social|gruppo/.test(msg)) {
-      return 'Nella **Community FITORA** puoi connetterti con altri atleti, partecipare a sfide settimanali, condividere i tuoi progressi e scalare le classifiche. Allenarsi insieme motiva molto di più! 🏆';
+    /* Adattabilità / Check-in */
+    if (/adattab|check.?in|umore|stanchezza|giorn|quotidian|stato.*oggi|come mi sento/.test(msg)) {
+      updateChips(CHIPS_AFTER_FEATURES);
+      return '**Adattabilità Quotidiana** 🔄\n\nOgni giorno FITORA ti chiede come stai tramite un breve **check-in**:\n\n- Come ti senti fisicamente?\n- Livello di stanchezza e stress\n- Qualità del sonno\n\nIn base alle risposte, l\'AI **modifica il piano di allenamento**:\n\n- 🟢 Forma top → allenamento intenso\n- 🟡 Moderato → workout ridotto\n- 🔴 Stanco → recupero attivo\n\nIn questo modo non ti alleni mai in modo controproducente!';
     }
 
-    if (/progress|risultat|statistic|grafico|dashboard/.test(msg)) {
-      return 'La sezione **Progressi** ti mostra grafici dettagliati su peso, misure corporee, performance degli esercizi e calorie nel tempo. Puoi impostare obiettivi e ricevere notifiche quando li raggiungi 📈';
+    /* Sport perfetto / Quiz */
+    if (/sport perfetto|sport ideal|quale sport|che sport|mi consiglia.*sport|quiz.*sport|sport.*quiz/.test(msg)) {
+      updateChips(['Dove trovo il Quiz Sport?', 'Come funziona FITORA?', 'Personal Trainer 💪', 'Community e sfide']);
+      return '**"Il Tuo Sport Perfetto"** 🏆\n\nFITORA incrocia:\n- I tuoi **dati clinici** (peso, altezza, pressione, glicemia)\n- Le tue **preferenze personali**\n- Le tue **capacità fisiche reali**\n\nIn 6 domande ti suggerisce i **3 sport più adatti a te**, spiegando i benefici specifici per la tua salute.\n\nVuoi aprire il quiz adesso?';
     }
 
-    if (/registr|iscri|account|creare un account|sign up/.test(msg)) {
-      return rich(buildSiteMap('registrazione'));
+    /* Allenamento con AI */
+    if (/allenament.*ai|ai.*allenament|scheda.*ai|ai.*scheda|workout.*inteligent/.test(msg)) {
+      updateChips(CHIPS_AFTER_FEATURES);
+      return '**Allenamento con l\'AI** ⚡\n\nFITORA genera schede di allenamento personalizzate basate su:\n\n- Il tuo **profilo clinico** (peso, altezza, parametri medici)\n- Il **check-in giornaliero** (come stai oggi)\n- I tuoi **obiettivi** (forza, dimagrimento, resistenza...)\n- Lo **sport che pratichi**\n\nLa scheda si adatta automaticamente ogni giorno — mai lo stesso workout generico!\n\nVuoi aprire l\'allenamento di oggi?';
     }
 
-    if (/login|accedi|entrare|password|accesso/.test(msg)) {
-      return 'Per accedere al tuo account FITORA, vai su **/login** dal menu in alto. Se hai dimenticato la password, puoi resettarla tramite email dalla stessa pagina 🔐';
+    /* Nutrizione */
+    if (/nutrizi|calorie|caloric|macro|dieta|alimentaz|pasto|cibo|bmr|tdee|fabbisogno/.test(msg)) {
+      updateChips(['Dove trovo il Piano Alimentare?', 'Come funziona FITORA?', 'Allenamento con l\'AI', 'Personal Trainer 💪']);
+      return '**Nutrizione Intelligente** 🥗\n\nFITORA calcola:\n\n- **BMR** (metabolismo basale) + **TDEE** (fabbisogno totale)\n- Suddivisione ottimale in **macronutrienti** (proteine, carbo, grassi)\n- **Piano pasti giornaliero** su misura\n\nTutto basato sui tuoi parametri reali — non una dieta generica, ma una dieta *tua*.\n\nVuoi aprire il Piano Alimentare?';
     }
 
-    if (/notifich|reminder|avvisi/.test(msg)) {
-      return 'FITORA ti invia **notifiche intelligenti** per ricordarti gli allenamenti, aggiornare i progressi e motivarti con messaggi personalizzati. Puoi gestire le preferenze nella sezione Profilo > Notifiche 🔔';
+    /* Community / Badge */
+    if (/community|amici|sfid|classifica|social|gruppo|badge|gamification|matching|compagno/.test(msg)) {
+      updateChips(['Dove trovo la Community?', 'Come funzionano i badge?', 'Personal Trainer 💪', 'Come mi registro?']);
+      return '**Community FITORA** 👥\n\n- **Matching Intelligente** — Trova compagni con lo stesso sport e livello 💚\n- **Sfide di Gruppo** — Compete in challenge settimanali\n- **Badge & Classifiche** — Guadagna badge: Prima Corsa, 5 km, 50 km...\n- **Condivisione WhatsApp** — Invita amici e sfidali\n- **Trova Compagno** — Scorri profili di atleti vicini a te\n\nVuoi aprire la Community?';
     }
 
-    if (/infortun|dolore|fisioterapia|medico|recupero/.test(msg)) {
-      return 'FITORA monitora il tuo carico di lavoro e ti avvisa quando stai rischiando il sovrallenamento. In caso di dolori o infortuni, ti consigliamo di consultare un medico o fisioterapista prima di riprendere. La nostra tecnologia Computer Vision aiuta a prevenire posture scorrette ⚠️';
+    /* Storico corse */
+    if (/storico|storia.*corse|corse.*salvate|sessioni.*salvate|le mie corse/.test(msg)) {
+      updateChips(['Dove trovo lo Storico?', 'Come funziona il GPS?', 'Community e sfide', 'Personal Trainer 💪']);
+      return '**Storico Corse** 📜\n\nIn questa sezione trovi tutte le tue sessioni salvate con:\n\n- **Data e ora** della corsa\n- **Distanza** percorsa in km\n- **Tempo** totale\n- **Calorie** bruciate\n- **Waypoint GPS** registrati\n\nPuoi anche cancellare lo storico o condividere i risultati con la community!\n\nVuoi aprire lo Storico?';
     }
 
-    if (/app mobile|scaricare|download|android|ios|iphone/.test(msg)) {
-      return 'L\'app FITORA è disponibile su **App Store** (iOS) e **Google Play** (Android). Scaricala gratuitamente e inizia il tuo percorso! Tutte le funzionalità premium si attivano con l\'abbonamento 📲';
+    /* Musica / Spotify */
+    if (/\b(musica|spotify|playlist|brano|canzone|song)\b/.test(msg)) {
+      updateChips(['Dove trovo la sezione Musica?', 'Come funziona il GPS?', 'Community e sfide', 'Come funziona FITORA?']);
+      return '**Musica su FITORA** 🎵\n\nNella sezione **Musica** della Dashboard puoi:\n\n- Ascoltare una **playlist predefinita** per l\'allenamento\n- Incollare qualsiasi link **Spotify** (brano, album o playlist)\n- Il player rimane attivo **durante la corsa GPS**\n- Il link viene **salvato automaticamente** per le prossime sessioni\n\nPerfetto per allenarsi con la tua musica preferita!';
     }
 
-    if (/wearable|smartwatch|apple watch|garmin|fitbit/.test(msg)) {
-      return 'FITORA si integra con i principali dispositivi wearable: **Apple Watch**, **Garmin** e altri tracker fitness. I dati si sincronizzano automaticamente per un\'analisi ancora più precisa ⌚';
+    /* Wearable */
+    if (/wearable|smartwatch|apple watch|garmin|fitbit|orologio.*smart/.test(msg)) {
+      updateChips(CHIPS_AFTER_FEATURES);
+      return '**Integrazione Wearable** ⌚\n\nFITORA sta sviluppando l\'integrazione con:\n\n- **Apple Watch**\n- **Garmin**\n- **Fitbit**\n\nI dati si sincronizzeranno automaticamente — senza inserimenti manuali.\n\nQuesta funzione arriva con **FITORA 2.0** 🚀 insieme a partnership mediche e telemedicina!';
     }
 
-    if (/supporto|contatt|aiuto|assistenza|email|telefono/.test(msg)) {
-      return rich(buildSiteMap('contatti'));
+    /* Futuro / FITORA 2.0 */
+    if (/futuro|prossimamente|2\.0|telemedicina|partnership|in arrivo|novit/.test(msg)) {
+      updateChips(['Come funziona FITORA?', 'Wearable e integrazioni', 'Personal Trainer 💪', 'Community e sfide']);
+      return '**Il Futuro di FITORA** 🚀\n\n**⌚ Integrazione Wearable** — Sync automatico con Apple Watch, Fitbit, Garmin.\n\n**🏥 Partnership Mediche** — Collaborazioni con palestre, centri medici e assicurazioni.\n\n**👨‍⚕️ Telemedicina** — I medici potranno monitorare i progressi dei pazienti a distanza.\n\nFITORA è una piattaforma in continua evoluzione — restate sintonizzati!';
     }
 
-    if (/grazie|perfetto|ottimo|bravo|bene/.test(msg)) {
+    /* App mobile */
+    if (/app mobile|scarica|download|android|ios|iphone|google play|app store/.test(msg)) {
+      updateChips(CHIPS_AFTER_FEATURES);
+      return '**App FITORA** 📲\n\nDisponibile su:\n- **App Store** (iOS / iPhone)\n- **Google Play** (Android)\n\nScaricala gratuitamente! Puoi anche usare FITORA direttamente dal **browser** senza installare nulla — prova subito la Dashboard!';
+    }
+
+    /* Registrazione */
+    if (/registr|iscri|creare.*account|sign.?up|nuovo.*account/.test(msg)) {
+      updateChips(['Dove mi registro?', 'Come funziona FITORA?', 'Personal Trainer 💪', 'Community e sfide']);
+      return 'Per registrarti a **FITORA** e iniziare il tuo percorso, clicca qui: Registrati su FITORA 📝\n\nÈ semplice e veloce!';
+    }
+
+    /* Login */
+    if (/login|accedi|entrare|password|accesso|dimenticato.*password/.test(msg)) {
+      updateChips(CHIPS_DEFAULT);
+      return 'Per accedere a **FITORA** usa il pulsante **Dashboard ⚡** nel menu in alto.\n\nSe hai dimenticato la password, dalla pagina di login trovi il link *"Password dimenticata?"* per resettarla via email 🔐';
+    }
+
+    /* Notifiche */
+    if (/notifich|reminder|avvisi|promemoria/.test(msg)) {
+      updateChips(CHIPS_AFTER_FEATURES);
+      return 'FITORA invia **notifiche intelligenti** 🔔\n\n- Reminder per gli allenamenti programmati\n- Aggiornamenti sui progressi settimanali\n- Avvisi sulle sfide della community\n- Messaggi motivazionali personalizzati\n\nGestisci le preferenze da **Profilo → Impostazioni Notifiche**.';
+    }
+
+    /* Infortuni / sicurezza */
+    if (/infortun|dolore|fisioterapia|recupero|sicurezza|male.*eserciz/.test(msg)) {
+      updateChips(CHIPS_AFTER_FEATURES);
+      return 'La **sicurezza** è al centro di FITORA ⚠️\n\nL\'app monitora il carico di lavoro e ti avvisa quando rischi il sovrallenamento. La **Computer Vision** analizza la postura in tempo reale per prevenire movimenti scorretti.\n\nIn caso di dolori o infortuni, consulta sempre un medico o fisioterapista prima di riprendere.\n\nHai bisogno di un **Personal Trainer** per una scheda su misura?';
+    }
+
+    /* Grazie */
+    if (/\b(grazie|perfetto|ottimo|bravo|ok grazie|capito|benissimo)\b/.test(msg)) {
+      updateChips(CHIPS_DEFAULT);
       return 'Prego! 😊 Sono qui se hai altre domande su FITORA. Buon allenamento! 💪';
     }
 
-    /* ── Off-topic ── */
-    if (/politic|notizie|calcio|sport\b|matematica|storia|meteo|medicina|covid|guerra|film|musica/.test(msg)) {
-      return 'Mi dispiace, posso aiutarti solo con argomenti inerenti a **FITORA** e al fitness 🏋️ Hai domande sull\'app, sui nostri servizi o sui Personal Trainer?';
+    /* Off-topic */
+    if (/politic|notizie|matematica|storia|meteo|covid|guerra|film|ricette di cucina/.test(msg)) {
+      updateChips(CHIPS_DEFAULT);
+      return 'Mi dispiace, posso aiutarti solo con argomenti inerenti a **FITORA** e al fitness 🏋️\n\nHai domande sull\'app, le funzionalità o i nostri Personal Trainer?';
     }
 
-    /* ── Fallback ── */
-    return 'Non ho capito bene la domanda 🤔 Posso aiutarti con:\n- **Funzionalità** dell\'app FITORA\n- **Dove trovare** le sezioni del sito\n- **Personal Trainer** disponibili\n- **Prezzi** e abbonamenti\n\nCome posso aiutarti?';
+    /* Fallback */
+    updateChips(CHIPS_DEFAULT);
+    return 'Non ho capito bene 🤔 Ecco cosa posso fare per te:\n\n- Spiegarti le **funzionalità** di FITORA\n- Portarti nelle **sezioni** del sito con un click\n- Presentarti i **Personal Trainer**\n- Rispondere su **allenamento, nutrizione, GPS e community**\n\nProva a riformulare o scegli un argomento qui sotto!';
   }
 
-
   /* ══════════════════════════════════════════════════════
-     APRI / CHIUDI
+     OPEN / CLOSE
   ══════════════════════════════════════════════════════ */
   function openChat() {
     if (isOpen) return;
     isOpen = true;
     const win = document.getElementById('cb-win');
     const btn = document.getElementById('cb-toggle');
-    win.style.zIndex = '99999';
+    win.style.zIndex  = '99999';
     win.style.display = 'flex';
     void win.offsetHeight;
     win.classList.add('cb-open');
@@ -503,7 +668,6 @@
     hideBadge();
     setTimeout(() => document.getElementById('cb-input')?.focus(), 320);
   }
-
   function closeChat() {
     if (!isOpen) return;
     isOpen = false;
@@ -512,22 +676,73 @@
     win.classList.remove('cb-open');
     win.classList.add('cb-closing');
     btn.classList.remove('cb-open');
-    setTimeout(() => {
-      win.style.display = 'none';
-      win.classList.remove('cb-closing');
-    }, 250);
+    setTimeout(() => { win.style.display = 'none'; win.classList.remove('cb-closing'); }, 250);
   }
-
   function hideBadge() {
     const b = document.getElementById('cb-badge');
     if (b) b.style.display = 'none';
   }
-
   function showBadge(n) {
     const b = document.getElementById('cb-badge');
     if (b) { b.textContent = n; b.style.display = 'flex'; }
   }
 
+  /* ══════════════════════════════════════════════════════
+     EXTRA STYLES
+  ══════════════════════════════════════════════════════ */
+  function injectExtraStyles() {
+    if (document.getElementById('cb-extra-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'cb-extra-styles';
+    style.textContent = `
+      .cb-rich { padding: 10px 12px !important; max-width: 96% !important; }
+
+      /* PT Cards */
+      .cb-pt-intro { font-size: 12px; color: #aaa; margin-bottom: 10px; }
+      .cb-pt-card {
+        display: flex; gap: 10px; align-items: flex-start;
+        background: rgba(0,255,136,0.04); border: 1px solid rgba(0,255,136,0.12);
+        border-radius: 12px; padding: 10px 11px; margin-bottom: 8px;
+      }
+      .cb-pt-card:last-child { margin-bottom: 0; }
+      .cb-pt-photo {
+        width: 54px; height: 54px; border-radius: 50%; object-fit: cover;
+        border: 2px solid rgba(0,255,136,0.35); flex-shrink: 0;
+      }
+      .cb-pt-info { flex: 1; min-width: 0; }
+      .cb-pt-name { font-size: 13px; font-weight: 700; color: #e8e8e8; }
+      .cb-pt-role { font-size: 10.5px; color: #00e676; margin: 2px 0 4px; }
+      .cb-pt-bio  { font-size: 11px; color: #aaa; line-height: 1.45; margin-bottom: 6px; }
+      .cb-pt-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+      .cb-pt-tag {
+        font-size: 9.5px; padding: 2px 7px; border-radius: 20px;
+        background: rgba(0,230,118,0.09); border: 1px solid rgba(0,230,118,0.22); color: #00e676;
+      }
+      .cb-pt-wa {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 11.5px; font-weight: 600; color: #25D366; text-decoration: none;
+        background: rgba(37,211,102,0.1); border: 1px solid rgba(37,211,102,0.28);
+        padding: 5px 10px; border-radius: 20px; transition: background 0.18s;
+      }
+      .cb-pt-wa:hover { background: rgba(37,211,102,0.2); }
+
+      /* Nav cards */
+      .cb-nav-intro { font-size: 12px; color: #aaa; margin-bottom: 9px; }
+      .cb-nav-grid { display: flex; flex-direction: column; gap: 5px; }
+      .cb-nav-item {
+        display: flex; align-items: center; gap: 10px;
+        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 9px; padding: 9px 11px;
+        cursor: pointer; width: 100%; text-align: left; color: #d8e8d8;
+        font-family: inherit; transition: background 0.15s, border-color 0.15s;
+      }
+      .cb-nav-item:hover { background: rgba(0,255,136,0.07); border-color: rgba(0,255,136,0.22); }
+      .cb-nav-icon  { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+      .cb-nav-label { flex: 1; font-size: 12.5px; font-weight: 600; }
+      .cb-nav-arrow { color: #00e676; font-size: 13px; }
+    `;
+    document.head.appendChild(style);
+  }
 
   /* ══════════════════════════════════════════════════════
      INIT
@@ -535,114 +750,52 @@
   function init() {
     buildDOM();
     injectExtraStyles();
-    renderChips();
+    renderChips(CHIPS_DEFAULT);
 
     setTimeout(() => {
-      addMsg('bot', CFG.welcomeMessage);
+      const hasChattedBefore = localStorage.getItem('fitora_has_chatted');
+      let msg = CFG.welcomeMessage;
+      if (hasChattedBefore) {
+        msg = 'Bentornato! 👋 Sono di nuovo qui per aiutarti con **FITORA**. Come posso esserti utile oggi?';
+      } else {
+        localStorage.setItem('fitora_has_chatted', 'true');
+      }
+      addMsg('bot', msg);
       if (!isOpen) showBadge(1);
     }, 900);
 
-    document.getElementById('cb-toggle').addEventListener('click', () => {
+    document.getElementById('cb-toggle').addEventListener('click', (e) => {
+      e.stopPropagation();
       isOpen ? closeChat() : openChat();
     });
+    document.getElementById('cb-reset').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if(confirm("Vuoi cancellare la cronologia della chat?")) {
+        localStorage.removeItem('fitora_chat_history');
+        location.reload();
+      }
+    });
     document.getElementById('cb-close').addEventListener('click', closeChat);
-    document.getElementById('cb-send').addEventListener('click', () => {
+    document.getElementById('cb-send').addEventListener('click', (e) => {
+      e.stopPropagation();
       const v = document.getElementById('cb-input')?.value;
       if (v?.trim()) send(v);
     });
     document.getElementById('cb-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        const v = e.target.value;
-        if (v.trim()) send(v);
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const v = e.target.value; if (v.trim()) send(v); }
     });
-    document.getElementById('cb-input').addEventListener('input', e => {
-      autoResize(e.target);
-    });
+    document.getElementById('cb-input').addEventListener('input', e => autoResize(e.target));
     document.addEventListener('click', e => {
       if (!isOpen) return;
       const win = document.getElementById('cb-win');
       const btn = document.getElementById('cb-toggle');
-      if (win && !win.contains(e.target) && !btn.contains(e.target)) closeChat();
+      
+      // Se l'elemento cliccato è stato rimosso (come i chip) o è fuori dalla finestra, chiudi
+      if (document.contains(e.target) && win && !win.contains(e.target) && !btn.contains(e.target)) {
+        closeChat();
+      }
     });
-  }
-
-
-  /* ══════════════════════════════════════════════════════
-     STILI AGGIUNTIVI (PT card, sezioni sito, link)
-     Iniettati via <style> per non richiedere modifiche al CSS
-  ══════════════════════════════════════════════════════ */
-  function injectExtraStyles() {
-    if (document.getElementById('cb-extra-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'cb-extra-styles';
-    style.textContent = `
-      /* Rich bubble */
-      .cb-rich { padding: 10px 12px !important; max-width: 92% !important; }
-
-      /* PT Cards */
-      .cb-pt-intro { font-size: 12.5px; color: #aaa; margin-bottom: 10px; }
-      .cb-pt-card {
-        display: flex; gap: 10px; align-items: flex-start;
-        background: rgba(0,255,136,0.04);
-        border: 1px solid rgba(0,255,136,0.12);
-        border-radius: 12px;
-        padding: 10px;
-        margin-bottom: 8px;
-      }
-      .cb-pt-card:last-child { margin-bottom: 0; }
-      .cb-pt-photo {
-        width: 52px; height: 52px; border-radius: 50%; object-fit: cover;
-        border: 2px solid rgba(0,255,136,0.3); flex-shrink: 0;
-      }
-      .cb-pt-info { flex: 1; min-width: 0; }
-      .cb-pt-name { font-size: 13px; font-weight: 700; color: #e8e8e8; }
-      .cb-pt-role { font-size: 11px; color: #00e676; margin: 1px 0 4px; }
-      .cb-pt-bio  { font-size: 11.5px; color: #aaa; line-height: 1.45; margin-bottom: 5px; }
-      .cb-pt-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 7px; }
-      .cb-pt-tag {
-        font-size: 10px; padding: 2px 7px; border-radius: 20px;
-        background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.25); color: #00e676;
-      }
-      .cb-pt-wa {
-        display: inline-flex; align-items: center; gap: 5px;
-        font-size: 11.5px; font-weight: 600;
-        color: #25D366; text-decoration: none;
-        background: rgba(37,211,102,0.1); border: 1px solid rgba(37,211,102,0.3);
-        padding: 5px 10px; border-radius: 20px;
-        transition: background 0.18s, border-color 0.18s;
-      }
-      .cb-pt-wa:hover {
-        background: rgba(37,211,102,0.2); border-color: rgba(37,211,102,0.5);
-      }
-
-      /* Site sections map */
-      .cb-sections { display: flex; flex-direction: column; gap: 5px; }
-      .cb-section-item {
-        display: flex; align-items: center; gap: 9px;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 9px; padding: 7px 10px;
-        text-decoration: none; color: #d8e8d8;
-        transition: background 0.18s, border-color 0.18s;
-      }
-      .cb-section-item:hover {
-        background: rgba(0,255,136,0.07); border-color: rgba(0,255,136,0.2);
-      }
-      .cb-section-item span:last-child { display: flex; flex-direction: column; }
-      .cb-section-item strong { font-size: 12.5px; color: #e8e8e8; }
-      .cb-section-item small  { font-size: 10.5px; color: #666; margin-top: 1px; }
-      .cb-section-icon { font-size: 16px; flex-shrink: 0; width: 22px; text-align: center; }
-
-      /* Generic link */
-      .cb-link {
-        color: #00e676; text-decoration: underline;
-        text-underline-offset: 2px;
-      }
-      .cb-link:hover { color: #00ff88; }
-    `;
-    document.head.appendChild(style);
+    loadChat();
   }
 
   if (document.readyState === 'loading') {
